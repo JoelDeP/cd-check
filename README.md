@@ -242,28 +242,47 @@ initials (`mf`) are automatic, so only add genuinely irregular nicknames.
 
 ## Deployment
 
-Pushing to `main` deploys to GitHub Pages via
-`.github/workflows/deploy.yml`. No build step — the repo is the site.
+The site is served by GitHub Pages straight from the `main` branch — no
+build step, no GitHub Actions. The repo *is* the site.
 
-The workflow:
+### Every push: stamp, then push
 
-1. Rewrites `__BUILD_ID__` in `sw.js` with the commit SHA. This is what makes
-   the service worker byte-different on every deploy, so browsers notice the
-   update and the app offers a one-tap **Reload** instead of making people
-   hard-refresh.
-2. Validates the JSON data files (a typo in `overrides.json` fails the deploy
-   rather than shipping a broken site).
-3. Uploads the repo as the Pages artifact and deploys it.
+```bash
+git commit -am "your change"
+node tools/stamp-build.mjs     # validates data, stamps sw.js, commits the stamp
+git push
+```
+
+`stamp-build`:
+
+1. Checks that `overrides.json`, `nicknames.json` and the manifest parse, so
+   a JSON typo can't ship as a broken site.
+2. Refuses to run with uncommitted changes, so the stamp matches exactly what
+   you're pushing.
+3. Writes the current commit SHA into `const BUILD` in `sw.js` and commits it
+   as `Stamp service worker build <sha>`. Running it twice is a no-op.
+
+**Why it matters:** browsers only install a new service worker when `sw.js`
+changes byte-for-byte. The stamp guarantees it does, so friends get a one-tap
+**Reload** banner instead of a stale app. If you forget, the deploy still goes
+live for new visitors, but anyone who already installed it keeps the old app
+shell until the next stamped push. Use `--no-commit` if you'd rather commit
+the stamp yourself.
+
+Pages usually publishes within a minute of the push; check progress under the
+repo's **Actions → pages-build-deployment** (that's GitHub's built-in Pages
+job, not a workflow in this repo).
 
 ### First-time setup
 
-1. Push the repo to GitHub.
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Push to `main`. The site lands at
-   `https://<user>.github.io/<repo>/`.
+1. Push `main` to GitHub.
+2. **Settings → Pages → Build and deployment → Source: Deploy from a branch →
+   Branch: `main`, folder: `/ (root)`** → Save.
+3. The site lands at `https://<user>.github.io/<repo>/`.
 
-Every path in the app is relative, so it works under a `/<repo>/` subpath with
-no configuration.
+`.nojekyll` is committed so Pages serves the files as-is instead of running
+them through Jekyll. Every path in the app is relative, so it works under a
+`/<repo>/` subpath with no configuration.
 
 ---
 
@@ -272,7 +291,7 @@ no configuration.
 ```
 index.html              app shell
 manifest.webmanifest    PWA manifest
-sw.js                   service worker (BUILD stamped by CI)
+sw.js                   service worker (BUILD stamped by tools/stamp-build.mjs)
 css/styles.css
 js/
   app.js                bootstrap, tabs, keyboard, SW registration
@@ -290,6 +309,7 @@ data/
   nicknames.json        search aliases
 tools/make-icons.mjs    regenerates the PNG icons
 tools/stale-overrides.mjs  lists overrides to re-verify after a patch
+tools/stamp-build.mjs   validates data + stamps sw.js before a push
 ```
 
 ---

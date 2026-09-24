@@ -1,9 +1,10 @@
 /**
  * CD Check service worker.
  *
- * BUILD is rewritten by .github/workflows/deploy.yml with the commit SHA, so
- * every deploy changes this file's bytes. The browser notices, installs the new
- * worker, and app.js offers a one-tap reload - nobody has to hard-refresh.
+ * BUILD is rewritten with the commit SHA by tools/stamp-build.mjs, which you
+ * run before each push. That changes this file's bytes on every deploy, so the
+ * browser notices, installs the new worker, and app.js offers a one-tap
+ * reload - nobody has to hard-refresh.
  *
  * Everything is relative so the app works under a /repo-name/ subpath.
  */
