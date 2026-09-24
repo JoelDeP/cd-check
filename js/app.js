@@ -161,15 +161,26 @@ function registerServiceWorker() {
       if (!document.hidden) reg.update().catch(() => {});
     });
 
-    reg.addEventListener('updatefound', () => {
-      const sw = reg.installing;
+    // Offer a new worker once it has finished installing. Only when a worker
+    // already controls the page - on a first visit there is nothing to update.
+    const offer = (sw) => {
+      if (sw && navigator.serviceWorker.controller) showUpdateBanner(sw);
+    };
+    const whenInstalled = (sw) => {
       if (!sw) return;
+      if (sw.state === 'installed') return offer(sw);
       sw.addEventListener('statechange', () => {
-        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-          showUpdateBanner(sw);
-        }
+        if (sw.state === 'installed') offer(sw);
       });
-    });
+    };
+
+    // A worker may already be waiting when the page loads: the browser's own
+    // navigation check can finish before this script runs, or the banner was
+    // ignored and the page refreshed. No 'updatefound' fires for it again, so
+    // without this the new version would sit unused until every tab closed.
+    offer(reg.waiting);
+    whenInstalled(reg.installing);
+    reg.addEventListener('updatefound', () => whenInstalled(reg.installing));
   }).catch((err) => console.warn('[cd-check] service worker failed', err));
 
   let reloading = false;
@@ -181,6 +192,13 @@ function registerServiceWorker() {
 }
 
 function showUpdateBanner(sw) {
+  // Several paths can report the same waiting worker; show one banner that
+  // always targets the newest.
+  const existing = document.querySelector('.update-bar');
+  if (existing) {
+    existing.targetWorker = sw;
+    return;
+  }
   const bar = el(
     'div',
     { class: 'update-bar', role: 'status' },
@@ -189,9 +207,10 @@ function showUpdateBanner(sw) {
       class: 'chip on',
       type: 'button',
       text: 'Reload',
-      onclick: () => sw.postMessage({ type: 'SKIP_WAITING' }),
+      onclick: () => bar.targetWorker.postMessage({ type: 'SKIP_WAITING' }),
     })
   );
+  bar.targetWorker = sw;
   document.body.append(bar);
 }
 
