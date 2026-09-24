@@ -269,13 +269,25 @@ live for new visitors, but anyone who already installed it keeps the old app
 shell until the next stamped push. Use `--no-commit` if you'd rather commit
 the stamp yourself.
 
+**The pre-push hook stops you forgetting.** `tools/hooks/pre-push` refuses to
+push `main` unless its tip is a fresh stamp — the tip's `sw.js` must carry the
+hash of the tip's parent, which is exactly what `stamp-build` produces, so a
+commit made after stamping is caught too. Other branches are not checked.
+Git doesn't version hooks, so enable it once per clone:
+
+```bash
+git config core.hooksPath tools/hooks
+```
+
+In an emergency, `git push --no-verify` skips it.
+
 Pages usually publishes within a minute of the push; check progress under the
 repo's **Actions → pages-build-deployment** (that's GitHub's built-in Pages
 job, not a workflow in this repo).
 
 ### First-time setup
 
-1. Push `main` to GitHub.
+1. `git config core.hooksPath tools/hooks`, then stamp and push `main`.
 2. **Settings → Pages → Build and deployment → Source: Deploy from a branch →
    Branch: `main`, folder: `/ (root)`** → Save.
 3. The site lands at `https://<user>.github.io/<repo>/`.
@@ -310,6 +322,7 @@ data/
 tools/make-icons.mjs    regenerates the PNG icons
 tools/stale-overrides.mjs  lists overrides to re-verify after a patch
 tools/stamp-build.mjs   validates data + stamps sw.js before a push
+tools/hooks/pre-push    blocks pushing main without a fresh stamp
 ```
 
 ---

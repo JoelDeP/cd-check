@@ -1,0 +1,4 @@
+#!/bin/sh
+# Delegates to pre-push.mjs; see that file. Enabled with:
+#   git config core.hooksPath tools/hooks
+exec node "$(dirname "$0")/pre-push.mjs" "$@"
