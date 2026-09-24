@@ -54,6 +54,19 @@ export function flagBadge(flags) {
   );
 }
 
+/**
+ * "verified on 16.19" pill for a hand-verified value the live patch has moved
+ * past. Returns null when the value is current (or was never hand-verified).
+ */
+export function verifiedPill(v) {
+  if (!v || !v.stale) return null;
+  const label = v.verifiedPatch ? `verified on ${v.verifiedPatch}` : 'unverified';
+  const title = v.verifiedPatch
+    ? `Last checked on patch ${v.verifiedPatch}; live patch is ${v.livePatch}. May be out of date.`
+    : 'Never verified against a patch.';
+  return el('span', { class: 'verified-pill', title, text: label });
+}
+
 let toastTimer = null;
 export function toast(message, ms = 6000) {
   let host = $('#toast');

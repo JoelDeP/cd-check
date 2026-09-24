@@ -120,7 +120,8 @@ does not publish.
 
 ### Corrected by hand in `overrides.json`
 
-Verified against the LoL Wiki on patch 16.19.1:
+Verified against the LoL Wiki on patch 16.19 (each entry records its own
+`verifiedPatch`; see [Keeping overrides current](#keeping-overrides-current)):
 
 - **Jayce, Nidalee, Elise, Rek'Sai** — Data Dragon publishes only one form's
   cooldowns. Both forms are now listed separately, with their own numbers.
@@ -139,11 +140,16 @@ Verified against the LoL Wiki on patch 16.19.1:
 Anything you put in `data/overrides.json` replaces or annotates Data Dragon and
 gets a ⚠ badge automatically. It's plain JSON — no rebuild, just reload.
 
+Every champion and summoner entry needs a **`verifiedPatch`** (`"16.19"` —
+major.minor only): the patch on which you last checked it by hand. An entry
+without one shows as *unverified*.
+
 **Correct one ability** (applies to every form):
 
 ```jsonc
 "champions": {
   "Darius": {
+    "verifiedPatch": "16.19",
     "abilities": {
       "W": {
         "cooldown": [9, 8, 7, 6, 5],
@@ -158,6 +164,7 @@ gets a ⚠ badge automatically. It's plain JSON — no rebuild, just reload.
 
 ```jsonc
 "Camille": {
+  "verifiedPatch": "16.19",
   "abilities": {
     "P": {
       "name": "Adaptive Defenses",
@@ -175,6 +182,7 @@ you leave out falls back to the Data Dragon value:
 
 ```jsonc
 "Jayce": {
+  "verifiedPatch": "16.19",
   "note": "Shown as a banner on the champion card.",
   "forms": [
     {
@@ -193,6 +201,7 @@ you leave out falls back to the Data Dragon value:
 
 ```jsonc
 "Teemo": {
+  "verifiedPatch": "16.19",
   "abilities": {
     "R": {
       "cooldown": [0.25, 0.25, 0.25],
@@ -203,7 +212,28 @@ you leave out falls back to the Data Dragon value:
 ```
 
 Other fields: `maxrank`, `unreliable: true` (flag it without changing the
-number), and under `summoners`, the same `cooldown` / `note` / `unreliable`.
+number), `verifiedPatch` on a single ability (wins over its champion's — use
+it when you re-check one slot but not the rest), and under `summoners`, the
+same `cooldown` / `note` / `unreliable` / `verifiedPatch`.
+
+### Keeping overrides current
+
+Hand-verified numbers go stale when Riot patches a champion. Once the live
+patch is newer than an entry's `verifiedPatch`, the app stops trusting it
+silently: the ability shows an amber **verified on 16.19** pill (and the ⚠
+tooltip explains). Nothing is hidden; you just know to double-check.
+
+After each patch, list what needs re-checking:
+
+```bash
+node tools/stale-overrides.mjs          # against the live patch
+node tools/stale-overrides.mjs 16.21    # simulate a future patch
+```
+
+It prints every stale entry with our value next to what Data Dragon publishes
+today, and exits 1 if anything is stale. Re-verify each against the LoL Wiki,
+then bump its `verifiedPatch`. Values that come straight from Data Dragon are
+never flagged — they're always current by definition.
 
 Search aliases live in `data/nicknames.json`. Prefix matches (`trynd`) and
 initials (`mf`) are automatic, so only add genuinely irregular nicknames.
@@ -248,6 +278,7 @@ js/
   app.js                bootstrap, tabs, keyboard, SW registration
   ddragon.js            Data Dragon fetch + IndexedDB cache
   model.js              normalisation, overrides, reliability flags
+  patch.js              patch comparison / staleness
   haste.js              cooldown maths
   search.js             fuzzy champion search
   store.js              localStorage settings
@@ -258,6 +289,7 @@ data/
   overrides.json        hand-verified corrections
   nicknames.json        search aliases
 tools/make-icons.mjs    regenerates the PNG icons
+tools/stale-overrides.mjs  lists overrides to re-verify after a patch
 ```
 
 ---

@@ -21,6 +21,7 @@ const SHELL = [
   './js/app.js',
   './js/ddragon.js',
   './js/model.js',
+  './js/patch.js',
   './js/haste.js',
   './js/search.js',
   './js/store.js',

@@ -12,6 +12,7 @@
  */
 
 import { img } from './ddragon.js';
+import { staleness } from './patch.js';
 
 export const SLOTS = ['P', 'Q', 'W', 'E', 'R'];
 
@@ -52,6 +53,11 @@ const FLAG = {
     label: 'Not published',
     text: 'Data Dragon publishes no cooldown for any passive. Add one to overrides.json if you need it.',
   },
+  stale: {
+    code: 'stale',
+    label: 'Needs re-check',
+    text: '',
+  },
   level: {
     code: 'level',
     label: 'Scales with level',
@@ -87,6 +93,7 @@ function makeAbility(fields) {
     ammo: null,
     note: '',
     source: 'ddragon',
+    verified: null,
     flags: [],
     ...fields,
   };
@@ -137,8 +144,23 @@ function passiveToAbility(patch, passive) {
   });
 }
 
-/** Apply one overrides.json ability patch on top of a base ability. */
-function applyAbilityOverride(base, o) {
+/** Badge text for a hand-verified value the live patch has moved past. */
+function staleFlag(v) {
+  return {
+    ...FLAG.stale,
+    label: v.verifiedPatch ? `Verified on ${v.verifiedPatch}` : 'Unverified',
+    text: v.verifiedPatch
+      ? `This correction was last checked on patch ${v.verifiedPatch}; the live patch is ${v.livePatch}. It may have changed — re-verify and bump verifiedPatch in overrides.json.`
+      : 'This correction has no verifiedPatch in overrides.json, so it has never been confirmed against a patch.',
+  };
+}
+
+/**
+ * Apply one overrides.json ability patch on top of a base ability.
+ * `vctx` = { livePatch, entryPatch } for staleness; an ability-level
+ * verifiedPatch wins over its champion entry's.
+ */
+function applyAbilityOverride(base, o, vctx) {
   const a = { ...base, flags: base.flags.slice() };
   if (o.name) a.name = o.name;
   if (o.cooldown) {
@@ -160,6 +182,10 @@ function applyAbilityOverride(base, o) {
   }
   if (a.scaling === 'level' && !a.flags.some((f) => f.code === 'level')) a.flags.push(FLAG.level);
 
+  a.verified = staleness(o.verifiedPatch || vctx.entryPatch, vctx.livePatch);
+  a.flags = a.flags.filter((f) => f.code !== 'stale');
+  if (a.verified.stale) a.flags.push(staleFlag(a.verified));
+
   // An override that pins every rank to zero is saying "this has no cooldown",
   // not "here is a corrected number".
   if (a.cooldown.length && a.cooldown.every((c) => c === 0)) {
@@ -169,20 +195,21 @@ function applyAbilityOverride(base, o) {
   return a;
 }
 
-function buildForm(patch, champ, base, formDef) {
+function buildForm(patch, champ, base, formDef, vctx) {
   const abilities = { ...base };
   for (const [slot, o] of Object.entries(formDef.abilities || {})) {
     const from = o.from !== undefined ? champ.spells[o.from] : null;
     const start = from
       ? spellToAbility(patch, champ.id, slot, from)
       : abilities[slot] || makeAbility({ slot });
-    abilities[slot] = applyAbilityOverride({ ...start, slot }, o);
+    abilities[slot] = applyAbilityOverride({ ...start, slot }, o, vctx);
   }
   return { name: formDef.name, short: formDef.short || formDef.name, abilities };
 }
 
 export function buildChampion(patch, champ, overrides) {
   const o = (overrides.champions || {})[champ.id] || {};
+  const vctx = { livePatch: patch, entryPatch: o.verifiedPatch };
 
   const base = { P: passiveToAbility(patch, champ.passive) };
   ['Q', 'W', 'E', 'R'].forEach((slot, i) => {
@@ -191,11 +218,11 @@ export function buildChampion(patch, champ, overrides) {
 
   // Slot-level overrides apply to every form.
   for (const [slot, ao] of Object.entries(o.abilities || {})) {
-    if (base[slot]) base[slot] = applyAbilityOverride(base[slot], ao);
+    if (base[slot]) base[slot] = applyAbilityOverride(base[slot], ao, vctx);
   }
 
   const forms = o.forms
-    ? o.forms.map((f) => buildForm(patch, champ, base, f))
+    ? o.forms.map((f) => buildForm(patch, champ, base, f, vctx))
     : [{ name: null, short: null, abilities: base }];
 
   return {
@@ -224,6 +251,7 @@ export function buildSummoners(patch, summonersRaw, overrides) {
     .filter((s) => s.modes.includes('CLASSIC'))
     .map((s) => {
       const o = so[s.id] || {};
+      const hasEntry = Boolean(so[s.id]);
       return {
         id: s.id,
         name: s.name,
@@ -233,6 +261,7 @@ export function buildSummoners(patch, summonersRaw, overrides) {
         note: o.note || '',
         unreliable: Boolean(o.unreliable || o.cooldown),
         upgrade: o.upgrade || null,
+        verified: hasEntry ? staleness(o.verifiedPatch, patch) : null,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

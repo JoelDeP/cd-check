@@ -1,6 +1,6 @@
 /** Main view: search a champion, read every cooldown at every rank. */
 
-import { el, clear, icon, flagBadge, toast } from '../ui.js';
+import { el, clear, icon, flagBadge, verifiedPill } from '../ui.js';
 import { SLOTS, fmt } from '../model.js';
 import {
   QUICK_HASTE, MAX_HASTE, SUMMONER_HASTE_SOURCES,
@@ -238,6 +238,7 @@ export function createChampionView(ctx) {
         icon(ability.icon, ability.name),
         el('span', { class: 'slot-key', text: ability.slot }),
         el('span', { class: 'ability-name', text: ability.name }),
+        verifiedPill(ability.verified),
         badge,
         el('span', { class: 'expand-caret', 'aria-hidden': 'true', text: '›' })
       ),
@@ -409,8 +410,15 @@ export function createChampionView(ctx) {
           el('span', { class: 'summoner-name', text: s.name }),
           el('span', { class: 'summoner-cd', text: fmt(eff) }),
           h > 0 ? el('span', { class: 'summoner-base', text: fmt(s.cooldown) }) : null,
-          s.unreliable
-            ? flagBadge([{ code: 'override', label: 'Caveat', text: s.note }])
+          s.unreliable || s.verified?.stale
+            ? flagBadge([
+              ...(s.unreliable ? [{ code: 'override', label: 'Caveat', text: s.note }] : []),
+              ...(s.verified?.stale ? [{
+                code: 'stale',
+                label: s.verified.verifiedPatch ? `Verified on ${s.verified.verifiedPatch}` : 'Unverified',
+                text: `Last checked on patch ${s.verified.verifiedPatch || '(never)'}; live patch is ${s.verified.livePatch}.`,
+              }] : []),
+            ])
             : null
         )
       );

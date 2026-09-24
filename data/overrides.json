@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "verifiedAgainstPatch": "16.19.1",
-  "verifiedOn": "2026-09-24",
+  "schemaNotes": "Every champion and summoner entry carries verifiedPatch (major.minor). When the live patch is newer, the UI shows a verified-on badge. An ability may set its own verifiedPatch to override its champion. List stale entries with: node tools/stale-overrides.mjs",
   "source": "wiki.leagueoflegends.com, cross-checked against Data Dragon championFull.json",
   "readme": "See README.md -> 'Editing overrides.json'. Anything listed here replaces or augments Data Dragon and is marked with a warning badge in the UI. Auto-detected problems (merged form names, ammo abilities, zero cooldowns) are flagged by the app without needing an entry here.",
 
   "summoners": {
     "SummonerTeleport": {
+      "verifiedPatch": "16.19",
       "note": "300s is correct for base Teleport. At 10:00 it upgrades to Unleashed Teleport, whose cooldown is 330s at level 1 scaling down to 240s at level 18.",
       "unreliable": true,
       "upgrade": {
@@ -20,6 +20,7 @@
 
   "champions": {
     "Camille": {
+      "verifiedPatch": "16.19",
       "abilities": {
         "P": {
           "name": "Adaptive Defenses",
@@ -32,6 +33,7 @@
     },
 
     "Akali": {
+      "verifiedPatch": "16.19",
       "abilities": {
         "Q": {
           "note": "The 1.5s cooldown is correct but misleading - Five Point Strike is gated by energy (110/100/90/80/70), so the practical rate of fire is far slower.",
@@ -45,6 +47,7 @@
     },
 
     "Corki": {
+      "verifiedPatch": "16.19",
       "abilities": {
         "R": {
           "note": "Charge-based. The listed cooldown is only the delay between casts; missiles regenerate on their own timer. Every third missile is 'The Big One'.",
@@ -55,6 +58,7 @@
     },
 
     "Teemo": {
+      "verifiedPatch": "16.19",
       "abilities": {
         "R": {
           "note": "Charge-based. The listed cooldown is only the delay between casts; traps regenerate on their own timer.",
@@ -65,6 +69,7 @@
     },
 
     "Jayce": {
+      "verifiedPatch": "16.19",
       "note": "Data Dragon merges Jayce's two weapon stances into one entry per slot and publishes only the Hammer values. The two stances have fully independent cooldowns.",
       "forms": [
         {
@@ -91,6 +96,7 @@
     },
 
     "Nidalee": {
+      "verifiedPatch": "16.19",
       "note": "Data Dragon merges Human and Cougar abilities into one entry per slot and publishes only the Human values. Cougar abilities scale with Aspect of the Cougar's rank, not with the Human ability's rank.",
       "forms": [
         {
@@ -117,6 +123,7 @@
     },
 
     "Elise": {
+      "verifiedPatch": "16.19",
       "note": "Data Dragon merges Human and Spider abilities into one entry per slot and publishes only the Human values.",
       "forms": [
         {
@@ -143,6 +150,7 @@
     },
 
     "RekSai": {
+      "verifiedPatch": "16.19",
       "note": "Data Dragon merges Burrowed and Unburrowed abilities into one entry per slot and publishes only the Unburrowed values.",
       "forms": [
         {
@@ -167,6 +175,7 @@
     },
 
     "Gnar": {
+      "verifiedPatch": "16.19",
       "note": "Data Dragon merges Mini and Mega abilities into one entry per slot. The cooldown values are correct for both - the two forms share their cooldowns - but only the Mini names are published.",
       "forms": [
         {

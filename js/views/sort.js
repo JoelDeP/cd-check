@@ -1,6 +1,6 @@
 /** Second view: every ability in the game, grouped by cooldown, shortest first. */
 
-import { el, clear, icon, flagBadge } from '../ui.js';
+import { el, clear, icon, flagBadge, verifiedPill } from '../ui.js';
 import { fmt, flattenAbilities } from '../model.js';
 import { applyHaste, hasteForSlot } from '../haste.js';
 import { settings, set } from '../store.js';
@@ -136,6 +136,7 @@ export function createSortView(ctx) {
       p.form.short ? el('span', { class: 'cd-row-form', text: p.form.short }) : null,
       el('span', { class: 'slot-key slot-key-sm', text: p.slot }),
       el('span', { class: 'cd-row-name', text: p.ability.name }),
+      verifiedPill(p.ability.verified),
       el('span', { class: 'cd-row-rank', text: `r${p.rank}` }),
       flagBadge(p.ability.flags.filter((f) => f.code !== 'passive'))
     );
