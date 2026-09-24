@@ -1,0 +1,201 @@
+/** Bootstrap: load data, build views, wire tabs and global keys. */
+
+import { loadDataDragon } from './ddragon.js';
+import { buildAllChampions, buildSummoners } from './model.js';
+import { buildSearchIndex } from './search.js';
+import { createChampionView } from './views/champion.js';
+import { createSortView } from './views/sort.js';
+import { el, clear, $ } from './ui.js';
+
+const statusEl = $('#status');
+const patchEl = $('#patch');
+const mainEl = $('#main');
+const tabsEl = $('#tabs');
+
+function status(text, kind = '') {
+  statusEl.textContent = text;
+  statusEl.className = `status ${kind}`;
+}
+
+async function getJson(path, fallback) {
+  try {
+    const res = await fetch(path, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(res.status);
+    return await res.json();
+  } catch (err) {
+    console.warn(`[cd-check] could not load ${path}`, err);
+    return fallback;
+  }
+}
+
+async function main() {
+  status('Loading…');
+
+  let data;
+  const [overrides, nicknames] = await Promise.all([
+    getJson('./data/overrides.json', { champions: {}, summoners: {} }),
+    getJson('./data/nicknames.json', { aliases: {} }),
+  ]);
+
+  try {
+    data = await loadDataDragon((msg) => status(msg));
+  } catch (err) {
+    status(err.message, 'error');
+    clear(mainEl).append(
+      el('section', { class: 'panel error-panel' },
+        el('h2', { text: 'Could not load champion data' }),
+        el('p', { text: err.message }),
+        el('button', { class: 'chip', type: 'button', text: 'Retry', onclick: () => location.reload() }))
+    );
+    return;
+  }
+
+  const champions = buildAllChampions(data.patch, data.champions, overrides);
+  const summoners = buildSummoners(data.patch, data.summoners, overrides);
+  const index = buildSearchIndex(champions, nicknames.aliases || {});
+
+  patchEl.textContent = data.patch;
+  patchEl.title = data.stale
+    ? `Offline — showing cached patch ${data.patch}`
+    : `Data Dragon patch ${data.patch}`;
+  patchEl.classList.toggle('stale', data.stale);
+  status(data.stale ? 'Offline — cached data' : '', data.stale ? 'warn' : '');
+
+  const ctx = { patch: data.patch, champions, summoners, index };
+
+  const sortView = createSortView({
+    ...ctx,
+    onPickChampion: (id) => { championView.show(id); showTab('champion'); },
+  });
+  const championView = createChampionView(ctx);
+
+  clear(mainEl).append(championView.el, sortView.el);
+
+  /* ------------------------------------------------------------------ tabs */
+
+  const TABS = [
+    { id: 'champion', label: 'Champion', view: championView },
+    { id: 'sort', label: 'Sort by cooldown', view: sortView },
+  ];
+  let activeTab = 'champion';
+
+  function showTab(id) {
+    activeTab = id;
+    for (const t of TABS) {
+      t.view.el.hidden = t.id !== id;
+      const btn = tabsEl.querySelector(`[data-tab="${t.id}"]`);
+      if (btn) {
+        btn.classList.toggle('on', t.id === id);
+        btn.setAttribute('aria-selected', String(t.id === id));
+      }
+    }
+    if (id === 'sort') sortView.refresh();
+    if (id === 'champion') championView.refresh();
+    location.hash = id === 'champion' ? '' : `#${id}`;
+  }
+
+  clear(tabsEl).append(
+    ...TABS.map((t) =>
+      el('button', {
+        type: 'button',
+        role: 'tab',
+        class: 'tab',
+        dataset: { tab: t.id },
+        text: t.label,
+        onclick: () => showTab(t.id),
+      })
+    )
+  );
+
+  const tabFromHash = () => (location.hash === '#sort' ? 'sort' : 'champion');
+  showTab(tabFromHash());
+  window.addEventListener('hashchange', () => {
+    const want = tabFromHash();
+    if (want !== activeTab) showTab(want);
+  });
+
+  /* ------------------------------------------------------------ global keys */
+
+  document.addEventListener('keydown', (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
+    if (e.key === 'Escape') {
+      if (!championView.clearSearch() && activeTab === 'champion') championView.focusSearch();
+      return;
+    }
+    if (typing) return;
+    if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
+      e.preventDefault();
+      showTab('champion');
+      championView.focusSearch();
+    } else if (e.key === '1') showTab('champion');
+    else if (e.key === '2') showTab('sort');
+  });
+
+  if (activeTab === 'champion') championView.focusSearch();
+
+  registerServiceWorker();
+}
+
+/* --------------------------------------------------------- service worker */
+
+const IS_LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  // Locally the worker's cache-first shell would serve stale files on every
+  // edit, so it stays off unless you ask for it with ?sw=1.
+  if (IS_LOCAL && !new URLSearchParams(location.search).has('sw')) {
+    navigator.serviceWorker.getRegistrations()
+      .then((rs) => rs.forEach((r) => r.unregister()))
+      .catch(() => {});
+    caches?.keys?.().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+    return;
+  }
+
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).then((reg) => {
+    // Check for a new deploy on load and whenever the tab comes back into view,
+    // so friends never have to hard-refresh.
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) reg.update().catch(() => {});
+    });
+
+    reg.addEventListener('updatefound', () => {
+      const sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateBanner(sw);
+        }
+      });
+    });
+  }).catch((err) => console.warn('[cd-check] service worker failed', err));
+
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  });
+}
+
+function showUpdateBanner(sw) {
+  const bar = el(
+    'div',
+    { class: 'update-bar', role: 'status' },
+    el('span', { text: 'A new version of CD Check is ready.' }),
+    el('button', {
+      class: 'chip on',
+      type: 'button',
+      text: 'Reload',
+      onclick: () => sw.postMessage({ type: 'SKIP_WAITING' }),
+    })
+  );
+  document.body.append(bar);
+}
+
+main().catch((err) => {
+  console.error(err);
+  status(err.message || 'Something went wrong', 'error');
+});

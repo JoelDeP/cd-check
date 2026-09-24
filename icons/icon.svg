@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CD Check">
+  <rect width="512" height="512" rx="118" fill="#151a22"/>
+  <g transform="translate(256 256)">
+    <circle r="150" fill="none" stroke="#262f3b" stroke-width="63"/>
+    <path d="M 0 -150 A 150 150 0 1 1 -88.2 121.4" fill="none" stroke="#4cc2ff"
+          stroke-width="63" stroke-linecap="butt"/>
+    <circle r="38.5" fill="#4cc2ff"/>
+  </g>
+</svg>
