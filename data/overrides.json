@@ -545,7 +545,7 @@
           "cooldown": [2, 2, 2, 2, 2],
           "note": "Data Dragon publishes 0. LoL Wiki ability data (API audit, V26.19).",
           "mechanics": [
-            "Can't be used on the same area of terrain again for a while (per-wall lockout)."
+            "Can't be used on the same wall again for 160/135/110/85/60s (by rank; ability haste shortens it). The 2s is the cooldown between different walls."
           ],
           "verifiedPatch": "16.19"
         }
@@ -983,6 +983,16 @@
           }
         }
       ]
+    },
+    "Mel": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "W": {
+          "unreliable": true,
+          "note": "Data Dragon and the LoL Wiki disagree at rank 3: Data Dragon says 33s, the wiki 32s (38/35/32/29/26). Ranks 1-2 and 4-5 agree. Showing Data Dragon's value.",
+          "verifiedPatch": "16.19"
+        }
+      }
     }
   }
 }

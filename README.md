@@ -394,7 +394,8 @@ The first run (16.19) found and fixed, all now in `overrides.json`:
   charges, 18→10s recharge, 3s between casts) — Data Dragon only describes
   mounted Kled. Kled now has Mounted / Dismounted tabs.
 - **Data Dragon publishes 0 for real cooldowns:** Tahm Kench R (120/100/80),
-  Kalista E (10→8), Rakan E (20→12), Talon E (2s), Veigar W (8s).
+  Kalista E (10→8), Rakan E (20→12), Talon E (2s between walls; the same
+  wall locks for 160/135/110/85/60s), Veigar W (8s).
 - **Static cooldowns the app was reducing with haste:** Amumu W, Aphelios W,
   Jinx Q, Karthus E, Rek'Sai W (burrowed), Samira R, Singed Q, Yuumi W
   (10/5/0 by level), K'Sante Q.
@@ -406,7 +407,8 @@ The first run (16.19) found and fixed, all now in `overrides.json`:
   (2 charges only with her Transcendent bonus).
 
 Left as they are, on purpose: **Mel W** (Data Dragon 38/35/33/29/26, wiki
-38→26 i.e. 32 at rank 3 — can't tell which is right, kept Data Dragon);
+38→26 i.e. 32 at rank 3 — can't tell which is right, so it keeps Data
+Dragon's value with a ⚠ saying the sources disagree at rank 3);
 passives whose wiki timer isn't a real cooldown or is ambiguous (Sion's Death
 Surge, Taliyah, Yuumi); cooldowns that are formulas of stacks, attack speed or
 resistances (Hecarim, Veigar, K'Sante, Zeri, Yasuo, Yone, Quinn…), which get a
