@@ -37,11 +37,13 @@ async function main() {
   status('Loading…');
 
   let data;
-  const [overrides, nicknames, hasteSources, matchupData] = await Promise.all([
+  const [overrides, nicknames, hasteSources, matchupData, lanesData, chargeData] = await Promise.all([
     getJson('./data/overrides.json', { champions: {}, summoners: {} }),
     getJson('./data/nicknames.json', { aliases: {} }),
     getJson('./data/haste-sources.json', { buffs: [], runes: [], itemExceptions: {} }),
     getJson('./data/matchup.json', { skillOrders: {}, keys: {}, pinnedDefault: [] }),
+    getJson('./data/lanes.json', { lanes: {} }),
+    getJson('./data/charges.json', { charges: {}, notCharges: {} }),
   ]);
 
   try {
@@ -57,7 +59,7 @@ async function main() {
     return;
   }
 
-  const champions = buildAllChampions(data.patch, data.champions, overrides);
+  const champions = buildAllChampions(data.patch, data.champions, overrides, { lanes: lanesData, charges: chargeData });
   const summoners = buildSummoners(data.patch, data.summoners, overrides);
   const index = buildSearchIndex(champions, nicknames.aliases || {});
 
@@ -98,7 +100,7 @@ async function main() {
   };
 
   const ctx = {
-    patch: data.patch, champions, summoners, index, hasteCtx, matchupData, tabHaste, tabSummonerToggles,
+    patch: data.patch, champions, summoners, index, hasteCtx, matchupData, tabHaste, tabSummonerToggles, lanesData,
     decodeQuery: (q) => decodeMatchup(new URLSearchParams(q), resolveChamp),
   };
 

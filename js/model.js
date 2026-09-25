@@ -48,6 +48,11 @@ const FLAG = {
     label: 'No cooldown',
     text: 'Data Dragon publishes no cooldown. This ability is gated by something else (a resource, an on-hit counter, or it is passive).',
   },
+  charges: {
+    code: 'charges',
+    label: 'Charges',
+    text: 'Charge ability: the number shown is the recharge time per charge (ability haste shortens it). The small delay between casts is shown separately. Verified against the LoL Wiki.',
+  },
   passive: {
     code: 'passive',
     label: 'Not published',
@@ -91,6 +96,7 @@ function makeAbility(fields) {
     range: '',
     description: '',
     ammo: null,
+    between: null,   // charge abilities: { values: [...], static }
     note: '',
     source: 'ddragon',
     verified: null,
@@ -221,13 +227,45 @@ function buildForm(patch, champ, base, formDef, vctx) {
   return { name: formDef.name, short: formDef.short || formDef.name, abilities };
 }
 
-export function buildChampion(patch, champ, overrides) {
+/**
+ * Apply data/charges.json (generated, wiki-verified) to one ability:
+ *   charges    - a real charge system: recharge per charge becomes the number
+ *                the app shows; the delay between casts is secondary.
+ *   notCharges - Data Dragon flags maxammo but it is an ordinary cooldown;
+ *                where Data Dragon's number is also wrong, correct it.
+ */
+function applyChargeData(a, key, chargeData, livePatch) {
+  const c = chargeData?.charges?.[key];
+  const nc = chargeData?.notCharges?.[key];
+  if (!c && !nc) return a;
+  const out = { ...a, flags: a.flags.filter((f) => f.code !== 'ammo') };
+  if (c) {
+    out.ammo = { max: c.max, recharge: c.recharge };
+    out.between = { values: c.between, static: Boolean(c.betweenStatic) };
+    out.flags.push(FLAG.charges);
+  } else if (nc.cooldownWrong && nc.wikiCooldown) {
+    out.flags.push({
+      ...FLAG.override,
+      text: `Data Dragon lists ${a.cooldown.join('/')}s and flags this as a charge ability; the LoL Wiki shows an ordinary ${nc.wikiCooldown.join('/')}s cooldown.`,
+    });
+    out.cooldown = nc.wikiCooldown.slice();
+    out.source = 'override';
+    out.flags = out.flags.filter((f) => f.code !== 'none');
+  }
+  out.verified = staleness(chargeData.verifiedPatch, livePatch);
+  if (out.verified.stale) out.flags.push(staleFlag(out.verified));
+  return out;
+}
+
+export function buildChampion(patch, champ, overrides, extras = {}) {
   const o = (overrides.champions || {})[champ.id] || {};
   const vctx = { livePatch: patch, entryPatch: o.verifiedPatch };
 
   const base = { P: passiveToAbility(patch, champ.passive) };
   ['Q', 'W', 'E', 'R'].forEach((slot, i) => {
-    base[slot] = spellToAbility(patch, champ.id, slot, champ.spells[i]);
+    base[slot] = applyChargeData(
+      spellToAbility(patch, champ.id, slot, champ.spells[i]), `${champ.id}:${slot}`, extras.charges, patch
+    );
   });
 
   // Slot-level overrides apply to every form.
@@ -247,19 +285,31 @@ export function buildChampion(patch, champ, overrides) {
     tags: champ.tags || [],
     // Base attack range; >300 is ranged (Endless Hunger's formula differs).
     ranged: (champ.range ?? 125) > 300,
+    // Riot's 0-10 ratings; used to order the item grid by relevance.
+    profile: champ.info || { attack: 5, defense: 5, magic: 5 },
+    // overrides.json "lanes" wins over the generated data/lanes.json.
+    lanes: o.lanes || extras.lanes?.lanes?.[champ.id] || [],
     icon: img.champion(patch, champ.image.full),
     forms,
     note: o.note || '',
   };
 }
 
-export function buildAllChampions(patch, championsRaw, overrides) {
+export function buildAllChampions(patch, championsRaw, overrides, extras = {}) {
   const out = {};
   for (const champ of Object.values(championsRaw)) {
-    out[champ.id] = buildChampion(patch, champ, overrides);
+    out[champ.id] = buildChampion(patch, champ, overrides, extras);
   }
   return out;
 }
+
+export const LANES = [
+  { id: 'top', label: 'Top' },
+  { id: 'jungle', label: 'Jungle' },
+  { id: 'mid', label: 'Mid' },
+  { id: 'bot', label: 'Bot' },
+  { id: 'support', label: 'Support' },
+];
 
 export function buildSummoners(patch, summonersRaw, overrides) {
   const so = overrides.summoners || {};
@@ -291,7 +341,7 @@ export function flattenAbilities(champions) {
       for (const slot of SLOTS) {
         const a = form.abilities[slot];
         if (!a || !a.cooldown.length) continue;
-        if (a.cooldown.every((c) => c === 0)) continue;
+        if (!a.ammo?.recharge && a.cooldown.every((c) => c === 0)) continue;
         rows.push({ champ, form, formIndex, ability: a, slot });
       }
     });

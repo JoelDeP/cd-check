@@ -18,6 +18,8 @@ const DEFAULTS = {
   favorites: [],        // [{ label, query }]
   skillOrders: {},      // { champId: 'QEW' } user overrides
   keyOverrides: {},     // { champId: { Q: true, E: false } } starred abilities
+  itemHistory: {},      // { champId: [itemId, ...] } most recent first, orders the item grid
+  lane: 'all',          // last-used lane filter, shared by search, Sort and the enemy picker
 };
 
 function read() {

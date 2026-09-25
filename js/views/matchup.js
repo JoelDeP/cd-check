@@ -5,6 +5,11 @@
  * what js/haste.js computes haste from, so everything shown here - every
  * cooldown, the totals, the trade windows - comes from the one calculator.
  *
+ * Each side has a loadout bar built for fast, one-handed input mid-game: a
+ * live total chip, a big level stepper, a tap-to-add grid of haste items,
+ * a big Hextech counter, and toggles for the common haste runes. The enemy's
+ * bar is open; yours is collapsed. Every tap applies instantly.
+ *
  * Phase 3 slots in without restructuring: the Live Client bridge will call
  * view.setSide('vs', { level, loadout: { items, ... }, summoners }) and mark
  * loadout.live[field] = true for what it filled. Fields the API cannot see
@@ -15,11 +20,12 @@
 import { el, clear, icon, flagBadge, verifiedPill, toast } from '../ui.js';
 import { SLOTS, fmt } from '../model.js';
 import { computeHaste, abilityCooldown, summonerCooldown, cooldownIndex } from '../haste.js';
-import { cdPair, staticTag, mechanicsBadge } from '../ability-ui.js';
-import { describeGrants } from '../items.js';
+import { cdPair, cdLine, hasNoCooldown, staticTag, mechanicsBadge } from '../ability-ui.js';
+import { describeGrants, rankItemsFor } from '../items.js';
 import { ORDERS, resolveOrder, ranksAtLevel, skillSequence } from '../skill-order.js';
 import { defaultMatchup, encodeMatchup } from '../matchup-state.js';
 import { searchChampions } from '../search.js';
+import { laneChips, inLane, laneRoster } from '../lanes.js';
 import { staleness } from '../patch.js';
 import { settings, set } from '../store.js';
 
@@ -36,6 +42,7 @@ export function createMatchupView(ctx) {
   const runeById = Object.fromEntries((ctx.hasteCtx.sources.runes || []).map((r) => [r.id, r]));
   const buffById = Object.fromEntries((ctx.hasteCtx.sources.buffs || []).map((b) => [b.id, b]));
   const formIndex = { me: 0, vs: 0 };
+  const itemQuery = { me: '', vs: '' };
   // haste-sources.json entries go stale like overrides do.
   const srcPill = (src) => verifiedPill(staleness(src?.verifiedPatch, ctx.patch));
 
@@ -54,10 +61,25 @@ export function createMatchupView(ctx) {
       if (!ctx.champions[s.champ]) return null;
       s.level = Math.max(1, Math.min(18, Number(s.level) || 6));
       s.loadout = { items: [], buffs: {}, runes: {}, extra: [], bonusAD: 0, live: {}, ...(s.loadout || {}) };
+      s.loadout.items = dedupeItems(s.loadout.items);
       if (!Array.isArray(s.summoners) || s.summoners.length !== 2) s.summoners = ['SummonerFlash', 'SummonerTeleport'];
     }
     m.linkLevels = m.linkLevels !== false;
     return m;
+  }
+
+  /** Shop rules on any incoming list (links, saved state): 6 max, one boots, no duplicate legendaries. */
+  function dedupeItems(list) {
+    const out = [];
+    let boots = false;
+    for (const id of list || []) {
+      const it = ctx.hasteCtx.items[id];
+      if (!it || out.length >= MAX_ITEMS) continue;
+      if (it.group === 'Boots') { if (boots) continue; boots = true; }
+      if (it.group === 'Legendary' && out.includes(id)) continue;
+      out.push(id);
+    }
+    return out;
   }
 
   function save() {
@@ -99,13 +121,28 @@ export function createMatchupView(ctx) {
     renderDerived();
   }
 
+  /** Change one side's level (both when linked) and redraw what depends on it. */
+  function setLevel(k, v) {
+    const lvl = Math.max(1, Math.min(18, v));
+    if (state.linkLevels) {
+      state.me.level = lvl;
+      state.vs.level = lvl;
+    } else {
+      state[k].level = lvl;
+    }
+    save();
+    renderLevelBar();
+    for (const { key } of SIDES) if (state.linkLevels || key === k) renderSideParts(key);
+    renderWindows();
+  }
+
   /* ------------------------------------------------------ small controls */
 
-  function stepper({ value, min = 0, max = 99, onChange, label }) {
+  function stepper({ value, min = 0, max = 99, onChange, label, big = false }) {
     const bump = (d) => onChange(Math.max(min, Math.min(max, value + d)));
     return el(
       'span',
-      { class: 'stepper', role: 'group', 'aria-label': label },
+      { class: `stepper${big ? ' stepper-big' : ''}`, role: 'group', 'aria-label': label },
       el('button', { type: 'button', class: 'step', 'aria-label': `${label} down`, disabled: value <= min, onclick: () => bump(-1) }, '−'),
       el('span', { class: 'step-val', text: String(value) }),
       el('button', { type: 'button', class: 'step', 'aria-label': `${label} up`, disabled: value >= max, onclick: () => bump(1) }, '+')
@@ -116,7 +153,7 @@ export function createMatchupView(ctx) {
     return el(
       'span',
       { class: `toggle-wrap${on ? ' on' : ''}` },
-      el('button', { type: 'button', class: `chip${on ? ' on' : ''}`, 'aria-pressed': String(on), title, onclick: onClick, text }),
+      el('button', { type: 'button', class: `chip chip-big${on ? ' on' : ''}`, 'aria-pressed': String(on), title, onclick: onClick, text }),
       extra || null
     );
   }
@@ -125,7 +162,7 @@ export function createMatchupView(ctx) {
 
   const bar = el('div', { class: 'mu-bar' });
 
-  function renderBar() {
+  function renderTopBar() {
     clear(bar);
     const favs = settings.favorites || [];
     bar.append(
@@ -142,7 +179,7 @@ export function createMatchupView(ctx) {
                 type: 'button',
                 class: 'fav-x',
                 'aria-label': `Remove ${f.label}`,
-                onclick: () => { set({ favorites: favs.filter((_, j) => j !== i) }); renderBar(); },
+                onclick: () => { set({ favorites: favs.filter((_, j) => j !== i) }); renderTopBar(); },
               }, '×')
             ))
           : el('span', { class: 'hint', text: 'No favourites yet.' })
@@ -161,7 +198,7 @@ export function createMatchupView(ctx) {
     const query = encodeMatchup(state);
     const favs = (settings.favorites || []).filter((f) => f.label !== label);
     set({ favorites: [{ label, query }, ...favs].slice(0, 20) });
-    renderBar();
+    renderTopBar();
     toast(`Saved “${label}”`, 2500);
   }
 
@@ -173,7 +210,7 @@ export function createMatchupView(ctx) {
     const url = shareUrl();
     try {
       await navigator.clipboard.writeText(url);
-      toast('Link copied — it opens this exact matchup.', 2500);
+      toast('Link copied — it opens this exact matchup, loadouts included.', 2500);
     } catch {
       toast(`Copy this link:\n${url}`, 12000);
     }
@@ -190,26 +227,17 @@ export function createMatchupView(ctx) {
 
   function renderLevelBar() {
     clear(levelBar);
-    const setBoth = (v) => {
-      state.me.level = v;
-      if (state.linkLevels) state.vs.level = v;
-      save();
-      renderLevelBar();
-      renderSideParts('me');
-      if (state.linkLevels) renderSideParts('vs');
-      renderWindows();
-    };
     const slider = el('input', {
       type: 'range', class: 'slider', min: '1', max: '18', step: '1',
       value: String(state.me.level), 'aria-label': 'Level',
-      oninput: (e) => setBoth(Number(e.target.value)),
+      oninput: (e) => setLevel('me', Number(e.target.value)),
     });
     levelBar.append(
       el(
         'div',
         { class: 'mu-level-row' },
         el('span', { class: 'field-label', text: state.linkLevels ? 'Level' : 'Your level' }),
-        stepper({ value: state.me.level, min: 1, max: 18, onChange: setBoth, label: 'Level' }),
+        stepper({ value: state.me.level, min: 1, max: 18, onChange: (v) => setLevel('me', v), label: 'Level' }),
         slider,
         el(
           'label',
@@ -268,8 +296,12 @@ export function createMatchupView(ctx) {
         icon(a.icon, '', 'icon icon-sm'),
         el('span', { class: 'slot-key', text: k.slot }),
         el('span', { class: 'window-name', text: `${enemy.name} ${k.slot} ${a.name}` }),
-        el('span', { class: 'window-arrow', text: 'on cooldown →' }),
+        el('span', { class: 'window-arrow', text: cd.recharge ? 'out of charges →' : 'on cooldown →' }),
+        // Charge abilities: the window is the recharge of one charge.
         el('span', { class: 'window-cd', text: `${fmt(cd.final)}s` }),
+        cd.recharge
+          ? el('span', { class: 'window-charges', text: `per charge (${cd.charges} charges${cd.between?.base ? `, ${fmt(cd.between.final)}s between casts` : ''})` })
+          : null,
         el('span', { class: 'window-role', text: `→ ${roleText}` }),
         a.mechanics?.length ? mechanicsBadge(a) : null
       ));
@@ -286,28 +318,29 @@ export function createMatchupView(ctx) {
     const p = {
       root: el('section', { class: `panel mu-side mu-${k}`, 'aria-label': label }),
       head: el('div', { class: 'mu-head' }),
+      loadout: el('div', { class: 'mu-loadout-slot' }),
       order: el('div', { class: 'mu-order' }),
-      controls: el('div', { class: 'mu-controls' }),
-      summary: el('div', { class: 'mu-summary' }),
       cds: el('div', { class: 'mu-cds' }),
       sums: el('div', { class: 'mu-sums' }),
     };
-    p.root.append(el('div', { class: 'mu-side-label', text: label }), p.head, p.order, p.summary, p.controls, p.cds, p.sums);
+    p.root.append(el('div', { class: 'mu-side-label', text: label }), p.head, p.loadout, p.order, p.cds, p.sums);
     parts[k] = p;
     return p.root;
   }
 
-  /* --- head: champion + picker + pinned */
+  /* --- head: champion + picker (+ lane filter for the enemy) + pinned */
 
   function renderHead(k) {
     const p = parts[k];
     clear(p.head);
     const champ = champOf(k);
     const isPinned = pinned().includes(champ.id);
+    const withLanes = k === 'vs';
 
     const input = el('input', {
       type: 'search', class: 'search-input mu-search',
-      placeholder: 'Change champion…', autocomplete: 'off', spellcheck: 'false',
+      placeholder: withLanes ? 'Enemy champion…' : 'Change champion…',
+      autocomplete: 'off', spellcheck: 'false',
       'aria-label': `${k === 'me' ? 'Your' : 'Enemy'} champion`,
     });
     const results = el('ul', { class: 'results', role: 'listbox', hidden: true });
@@ -322,6 +355,14 @@ export function createMatchupView(ctx) {
         onmousedown: (e) => { e.preventDefault(); pick(c.id); },
       }, icon(c.icon, '', 'icon icon-sm'), el('span', { class: 'result-name', text: c.name }))));
     };
+    const lane = () => (withLanes ? settings.lane || 'all' : 'all');
+    const runSearch = (browse = false) => {
+      const q = input.value.trim();
+      if (q) matches = searchChampions(ctx.index, q, 80).filter((c) => inLane(c, lane())).slice(0, 8);
+      else matches = browse && lane() !== 'all' ? laneRoster(ctx.champions, lane()) : [];
+      active = 0;
+      renderResults();
+    };
     const pick = (id) => {
       state[k].champ = id;
       state[k].order = null;
@@ -330,11 +371,7 @@ export function createMatchupView(ctx) {
       renderSide(k);
       renderWindows();
     };
-    input.addEventListener('input', () => {
-      matches = input.value.trim() ? searchChampions(ctx.index, input.value, 6) : [];
-      active = 0;
-      renderResults();
-    });
+    input.addEventListener('input', () => runSearch());
     input.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(active + 1, matches.length - 1); renderResults(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(active - 1, 0); renderResults(); }
@@ -342,6 +379,17 @@ export function createMatchupView(ctx) {
       else if (e.key === 'Escape') { input.value = ''; matches = []; renderResults(); }
     });
     input.addEventListener('blur', () => setTimeout(() => { matches = []; renderResults(); }, 120));
+
+    const laneRow = withLanes
+      ? laneChips(settings.lane, (l) => {
+        set({ lane: l });
+        renderHead(k);
+        const fresh = parts[k].head.querySelector('.mu-search');
+        fresh.focus();
+        fresh.dispatchEvent(new CustomEvent('browse'));
+      })
+      : null;
+    input.addEventListener('browse', () => runSearch(true));
 
     const pinBtn = el('button', {
       type: 'button',
@@ -356,16 +404,17 @@ export function createMatchupView(ctx) {
       },
     }, isPinned ? '★' : '☆');
 
-    p.head.append(
+    p.head.append(...[
       el(
         'div',
         { class: 'mu-champ' },
         icon(champ.icon, champ.name, 'portrait portrait-sm'),
         el('div', { class: 'mu-champ-text' },
           el('h2', { text: champ.name }),
-          el('p', { class: 'card-sub', text: champ.tags.join(' · ') })),
+          el('p', { class: 'card-sub', text: [champ.tags.join(' · '), champ.lanes?.length ? champ.lanes.join(' / ') : ''].filter(Boolean).join(' — ') })),
         pinBtn
       ),
+      laneRow,
       el('div', { class: 'search-wrap mu-search-wrap' }, input, results),
       el(
         'div',
@@ -383,8 +432,205 @@ export function createMatchupView(ctx) {
           text: f.short || f.name,
           onclick: () => { formIndex[k] = i; renderHead(k); renderDerived(); },
         })))
-        : ''
-    );
+        : null,
+    ].filter(Boolean));
+  }
+
+  /* --- the loadout bar */
+
+  /** "35 AH · 0 ult · 18 summ" */
+  function totalsChip(totals) {
+    const part = (v, label, cls) => el('span', { class: `lt-part ${cls}${v ? '' : ' zero'}` },
+      el('b', { text: fmt(v) }), ` ${label}`);
+    return el('span', { class: 'loadout-total' },
+      part(totals.ability, 'AH', 'ah'),
+      totals.basic ? [' · ', part(totals.basic, 'basic', 'basic')] : null,
+      ' · ', part(totals.ultimate, 'ult', 'ult'),
+      ' · ', part(totals.summoner, 'summ', 'summ'));
+  }
+
+  function renderLoadout(k) {
+    const p = parts[k];
+    const wasOpen = p.loadout.querySelector('details.loadout')?.open;
+    clear(p.loadout);
+    const s = state[k];
+    const L = s.loadout;
+    const champ = champOf(k);
+    const { totals, lines, notes } = hasteOf(k);
+    const changed = () => { save(); renderLoadout(k); renderSideParts(k, { loadout: false }); renderWindows(); };
+
+    // Items: owned chips (tap to remove), search, tap-to-add icon grid.
+    const owned = L.items.map((id) => ctx.hasteCtx.items[id]).filter(Boolean);
+    const hasBoots = owned.some((it) => it.group === 'Boots');
+    const full = L.items.length >= MAX_ITEMS;
+    const blocked = (it) => full || (it.group === 'Boots' && hasBoots) || (it.group === 'Legendary' && L.items.includes(it.id));
+    const ownedRow = el('div', { class: 'owned-items' },
+      owned.length
+        ? owned.map((it, i) => el('button', {
+          type: 'button', class: 'owned-item', title: `Remove ${it.name}`, 'aria-label': `Remove ${it.name}`,
+          onclick: () => { L.items.splice(i, 1); changed(); },
+        }, icon(it.icon, '', 'icon'), el('span', { class: 'owned-x', text: '×' })))
+        : el('span', { class: 'hint', text: 'No items — tap one below.' }));
+
+    const history = settings.itemHistory?.[champ.id] || [];
+    const q = itemQuery[k].trim().toLowerCase();
+    const ranked = rankItemsFor(ctx.hasteCtx.items, champ, history)
+      .filter((it) => !q || it.name.toLowerCase().includes(q));
+    const grid = el('div', { class: 'item-grid', role: 'group', 'aria-label': 'Haste items' },
+      ranked.map((it) => el('button', {
+        type: 'button',
+        class: `grid-item${blocked(it) ? ' blocked' : ''}`,
+        disabled: blocked(it),
+        title: `${it.name}: ${describeGrants(it.grants) || it.note}`,
+        'aria-label': `Add ${it.name} (${describeGrants(it.grants) || 'see note'})`,
+        onclick: () => {
+          if (blocked(it)) return;
+          L.items.push(it.id);
+          const hist = { ...(settings.itemHistory || {}) };
+          hist[champ.id] = [it.id, ...(hist[champ.id] || []).filter((x) => x !== it.id)].slice(0, 12);
+          set({ itemHistory: hist });
+          changed();
+        },
+      }, icon(it.icon, '', 'icon'), el('span', { class: 'grid-cap', text: gridCaption(it) }))));
+    const search = el('input', {
+      type: 'search', class: 'search-input item-search', placeholder: 'Filter items…',
+      value: itemQuery[k], 'aria-label': 'Filter items',
+      oninput: (e) => {
+        itemQuery[k] = e.target.value;
+        const pos = e.target.selectionStart;
+        renderLoadout(k);
+        const again = parts[k].loadout.querySelector('.item-search');
+        again.focus();
+        again.setSelectionRange(pos, pos);
+      },
+    });
+
+    // Drakes, level, rune toggles - irrelevant ones hidden.
+    const hx = buffById.hextech;
+    const blue = buffById.blue;
+    const lvl = s.level;
+    const rune = (id) => runeById[id];
+    const runeOn = (id) => L.runes[id] !== undefined && L.runes[id] !== false && L.runes[id] !== null;
+    const flip = (id, stacked) => () => { if (runeOn(id)) delete L.runes[id]; else L.runes[id] = stacked ? 0 : true; changed(); };
+    // Transcendence does nothing before level 5, Ultimate Hunter nothing before R (6).
+    const showTransc = lvl >= 5 || runeOn('transcendence');
+    const showUH = lvl >= 6 || runeOn('ultimateHunter');
+
+    const toggles = el('div', { class: 'loadout-toggles' },
+      blue ? toggleChip({ on: Boolean(L.buffs.blue), text: 'Blue buff', title: blue.note, onClick: () => { L.buffs.blue = !L.buffs.blue; changed(); }, extra: [manualTag(k, blue.live), srcPill(blue)] }) : null,
+      rune('cosmic') ? toggleChip({ on: runeOn('cosmic'), text: 'Cosmic', title: rune('cosmic').name, onClick: flip('cosmic'), extra: [manualTag(k, rune('cosmic').live), srcPill(rune('cosmic'))] }) : null,
+      rune('shardAH') ? toggleChip({ on: runeOn('shardAH'), text: 'AH shard', title: rune('shardAH').name, onClick: flip('shardAH'), extra: srcPill(rune('shardAH')) }) : null,
+      showTransc && rune('transcendence') ? toggleChip({ on: runeOn('transcendence'), text: 'Transcendence', title: rune('transcendence').note, onClick: flip('transcendence'), extra: srcPill(rune('transcendence')) }) : null,
+      showUH && rune('ultimateHunter') ? toggleChip({
+        on: runeOn('ultimateHunter'), text: 'Ult Hunter', title: rune('ultimateHunter').note, onClick: flip('ultimateHunter', true),
+        extra: runeOn('ultimateHunter')
+          ? stepper({ value: Number(L.runes.ultimateHunter) || 0, max: 5, label: 'Bounty Hunter stacks', onChange: (n) => { L.runes.ultimateHunter = n; changed(); } })
+          : srcPill(rune('ultimateHunter')),
+      }) : null);
+
+    // Less common inputs, tucked away.
+    const extraVal = (kind) => L.extra.find((e) => e.kind === kind)?.amount || 0;
+    const setExtra = (kind, amount) => {
+      L.extra = L.extra.filter((e) => e.kind !== kind);
+      if (amount) L.extra.push({ kind, amount, label: kind === 'ability' ? 'Manual ability haste' : 'Manual ultimate haste' });
+      save();
+      renderSideParts(k, { loadout: false });
+      renderWindows();
+      const chip = parts[k].loadout.querySelector('.loadout-total');
+      if (chip) chip.replaceWith(totalsChip(hasteOf(k).totals));
+    };
+    const numBox = (label, value, onInput, max = 300) => el('label', { class: 'ctrl' }, label, ' ',
+      el('input', {
+        type: 'number', class: 'num num-sm', min: '0', max: String(max), step: '1', value: String(value || 0),
+        inputmode: 'numeric', oninput: (e) => onInput(Math.max(0, Math.min(max, Number(e.target.value) || 0))),
+      }));
+    const hasFormula = L.items.some((id) => ctx.hasteCtx.items[id]?.formula);
+    const ranged = L.rangedOverride ?? champ.ranged;
+    const stackRune = (id) => {
+      const r = rune(id);
+      if (!r) return null;
+      return toggleChip({
+        on: runeOn(id), text: r.short || r.name, title: r.note || r.name, onClick: flip(id, true),
+        extra: runeOn(id)
+          ? stepper({ value: Number(L.runes[id]) || 0, max: Math.max(...r.grants.map((g) => g.maxStacks || 0), 0) || 20, label: r.stacksLabel || 'stacks', onChange: (n) => { L.runes[id] = n; changed(); } })
+          : srcPill(r),
+      });
+    };
+    const cin = buffById.cinders;
+    const more = el('details', { class: 'loadout-more' },
+      el('summary', { text: 'More: other runes, cinders, manual haste' }),
+      el('div', { class: 'loadout-toggles' },
+        stackRune('jack'),
+        stackRune('legendHaste'),
+        rune('axiomArcanist') ? toggleChip({ on: runeOn('axiomArcanist'), text: 'Axiom', title: rune('axiomArcanist').note, onClick: flip('axiomArcanist') }) : null,
+        cin ? el('span', { class: 'ctrl', title: cin.note }, 'Cinders ', stepper({ value: Number(L.buffs.cinders) || 0, max: 20, label: 'Infernal cinders', onChange: (v) => { L.buffs.cinders = v; changed(); } })) : null),
+      el('div', { class: 'loadout-toggles' },
+        numBox('+AH', extraVal('ability'), (v) => setExtra('ability', v)),
+        numBox('+Ult', extraVal('ultimate'), (v) => setExtra('ultimate', v)),
+        hasFormula ? numBox('Bonus AD', L.bonusAD, (v) => { L.bonusAD = v; save(); renderSideParts(k, { loadout: false }); renderWindows(); }, 1000) : null,
+        hasFormula ? toggleChip({ on: ranged, text: ranged ? 'Ranged' : 'Melee', title: 'Endless Hunger: 13% (melee) / 10% (ranged) of bonus AD', onClick: () => { L.rangedOverride = !ranged; changed(); } }) : null));
+
+    const breakdown = el('details', { class: 'breakdown' },
+      el('summary', {}, 'Where the haste comes from'),
+      lines.length
+        ? el('ul', { class: 'breakdown-list' }, lines.map((l) => el('li', {},
+          el('span', { class: 'b-amt', text: `+${fmt(l.amount)}` }),
+          el('span', { class: 'b-kind', text: KIND_SHORT[l.kind] }),
+          el('span', { class: 'b-src', text: l.label }),
+          l.hint ? el('span', { class: 'hint', text: `(${l.hint})` }) : null,
+          el('span', { class: `b-group g-${l.group}`, text: l.group }))))
+        : el('p', { class: 'hint', text: 'Nothing yet.' }),
+      notes.map((n) => el('p', { class: 'note note-flag' }, el('strong', { text: `${n.label}: ` }), n.note)));
+
+    const body = el('div', { class: 'loadout-body' },
+      el('div', { class: 'loadout-row' },
+        // Each label stays with its control when the row wraps on a phone.
+        el('span', { class: 'loadout-pair' },
+          el('span', { class: 'loadout-label', text: state.linkLevels ? 'Level (both)' : 'Level' }),
+          stepper({ value: lvl, min: 1, max: 18, big: true, label: 'Level', onChange: (v) => setLevel(k, v) })),
+        hx ? el('span', { class: 'loadout-pair' },
+          el('span', { class: 'loadout-label', text: 'Hextech' }),
+          stepper({ value: Number(L.buffs.hextech) || 0, max: hx.grants[0].maxStacks || 4, big: true, label: 'Hextech Drake stacks', onChange: (v) => { L.buffs.hextech = v; changed(); } }),
+          manualTag(k, hx.live),
+          srcPill(hx)) : null),
+      toggles,
+      el('div', { class: 'loadout-row loadout-items-head' },
+        el('span', { class: 'loadout-label', text: `Items ${owned.length}/${MAX_ITEMS}` }),
+        ownedRow),
+      search,
+      grid,
+      more,
+      breakdown);
+
+    const reset = el('button', {
+      type: 'button', class: 'chip reset-btn', title: 'Clear items, drakes and runes (keeps champion and level)',
+      onclick: (e) => {
+        e.preventDefault();
+        s.loadout = { items: [], buffs: {}, runes: {}, extra: [], bonusAD: 0, live: {} };
+        itemQuery[k] = '';
+        changed();
+      },
+    }, 'Reset');
+
+    const head = el('div', { class: 'loadout-head' },
+      el('span', { class: 'loadout-title', text: k === 'vs' ? 'Enemy loadout' : 'Your loadout' }),
+      totalsChip(totals),
+      reset);
+
+    // The enemy's bar is open; yours starts collapsed (<details>, remembered while open).
+    const box = el('details', { class: `loadout loadout-${k}` }, el('summary', {}, head), body);
+    box.open = wasOpen ?? (k === 'vs');
+    p.loadout.append(box);
+  }
+
+  function gridCaption(it) {
+    const g = Object.fromEntries(it.grants.map((x) => [x.kind, x.amount]));
+    const bits = [];
+    if (g.ability) bits.push(`${g.ability}`);
+    if (g.basic) bits.push(`${g.basic}b`);
+    if (g.ultimate) bits.push(`${g.ultimate}u`);
+    if (g.summoner) bits.push(`${g.summoner}s`);
+    return bits.join('·') || (it.formula ? 'AD%' : '?');
   }
 
   /* --- skill order */
@@ -418,179 +664,17 @@ export function createMatchupView(ctx) {
       ORDERS.map((o) => el('option', { value: o, selected: order.source === 'user' && order.max === o }, `Max ${pretty(o)}`))
     );
 
-    const levelControl = !state.linkLevels
-      ? stepper({
-        value: lvl, min: 1, max: 18, label: 'Level',
-        onChange: (v) => { state[k].level = v; save(); renderSideParts(k); renderWindows(); if (k === 'me') renderLevelBar(); },
-      })
-      : null;
-
     p.order.append(
       el('div', { class: 'mu-order-row' },
-        !state.linkLevels ? el('span', { class: 'field-label', text: 'Level' }) : null,
-        levelControl,
         el('span', { class: 'field-label', text: 'Skill order' }),
         select),
       el('div', { class: 'seq', 'aria-label': 'Skill sequence' },
-        seq.map((s, i) => el('span', {
-          class: `seq-cell${i < lvl ? ' done' : ''}${i === lvl - 1 ? ' now' : ''}${s === 'R' ? ' r' : ''}`,
-          title: `Level ${i + 1}: ${s || '-'}`,
-          text: s || '·',
+        seq.map((sl, i) => el('span', {
+          class: `seq-cell${i < lvl ? ' done' : ''}${i === lvl - 1 ? ' now' : ''}${sl === 'R' ? ' r' : ''}`,
+          title: `Level ${i + 1}: ${sl || '-'}`,
+          text: sl || '·',
         })))
     );
-  }
-
-  /* --- haste controls */
-
-  function renderControls(k) {
-    const p = parts[k];
-    clear(p.controls);
-    const s = state[k];
-    const L = s.loadout;
-    const changed = () => { save(); renderControls(k); renderSideParts(k, { controls: false }); renderWindows(); };
-
-    // Items
-    const itemRows = L.items.map((id, i) => {
-      const it = ctx.hasteCtx.items[id];
-      return el('span', { class: 'item-chip', title: it ? `${it.name}: ${describeGrants(it.grants) || it.note}` : id },
-        it ? icon(it.icon, '', 'icon icon-xs') : null,
-        el('span', { text: it?.name || `#${id}` }),
-        el('button', {
-          type: 'button', class: 'fav-x', 'aria-label': `Remove ${it?.name || id}`,
-          onclick: () => { L.items.splice(i, 1); changed(); },
-        }, '×'));
-    });
-    const groups = { Boots: [], Legendary: [], Epic: [], Basic: [] };
-    for (const it of Object.values(ctx.hasteCtx.items)) (groups[it.group] || groups.Basic).push(it);
-    // Shop rules: one pair of boots, no duplicate legendaries. Components may repeat.
-    const owned = L.items.map((id) => ctx.hasteCtx.items[id]).filter(Boolean);
-    const hasBoots = owned.some((it) => it.group === 'Boots');
-    const blocked = (it) => (it.group === 'Boots' && hasBoots)
-      || (it.group === 'Legendary' && L.items.includes(it.id));
-    const addSelect = el(
-      'select',
-      {
-        class: 'select',
-        'aria-label': 'Add item',
-        disabled: L.items.length >= MAX_ITEMS,
-        onchange: (e) => {
-          if (e.target.value) { L.items.push(e.target.value); changed(); }
-        },
-      },
-      el('option', { value: '' }, L.items.length >= MAX_ITEMS ? 'Inventory full' : '+ Add item…'),
-      Object.entries(groups).filter(([, list]) => list.length).map(([g, list]) =>
-        el('optgroup', { label: g },
-          list.sort((a, b) => a.name.localeCompare(b.name)).map((it) =>
-            el('option', { value: it.id, disabled: blocked(it) }, `${it.name} — ${describeGrants(it.grants) || 'see note'}`))))
-    );
-
-    const hasFormula = L.items.some((id) => ctx.hasteCtx.items[id]?.formula);
-    const ranged = L.rangedOverride ?? champOf(k).ranged;
-
-    // Buffs
-    const hx = buffById.hextech;
-    const cin = buffById.cinders;
-    const blue = buffById.blue;
-    const buffRow = el('div', { class: 'ctrl-row' },
-      el('span', { class: 'ctrl-label', text: 'Objectives' }),
-      hx ? el('span', { class: 'ctrl', title: hx.note }, 'Hextech ', stepper({
-        value: Number(L.buffs.hextech) || 0, max: 4, label: 'Hextech Drake stacks',
-        onChange: (v) => { L.buffs.hextech = v; changed(); },
-      }), manualTag(k, hx.live), srcPill(hx)) : null,
-      blue ? toggleChip({
-        on: Boolean(L.buffs.blue), text: 'Blue buff', title: blue.note,
-        onClick: () => { L.buffs.blue = !L.buffs.blue; changed(); },
-        extra: [manualTag(k, blue.live), srcPill(blue)],
-      }) : null,
-      cin ? el('span', { class: 'ctrl', title: cin.note }, 'Cinders ', stepper({
-        value: Number(L.buffs.cinders) || 0, max: cin.grants[0].maxStacks || 20, label: 'Infernal cinders',
-        onChange: (v) => { L.buffs.cinders = v; changed(); },
-      }), srcPill(cin)) : null);
-
-    // Runes
-    const runeCtl = (id) => {
-      const r = runeById[id];
-      if (!r) return null;
-      const v = L.runes[id];
-      const on = v !== undefined && v !== false && v !== null;
-      const stacked = r.grants.some((g) => g.perStack !== undefined);
-      const maxStacks = Math.max(...r.grants.map((g) => g.maxStacks || 0), 0) || 20;
-      return toggleChip({
-        on,
-        text: r.short || r.name,
-        title: `${r.name}${r.note ? ` — ${r.note}` : ''}`,
-        onClick: () => { if (on) delete L.runes[id]; else L.runes[id] = stacked ? 0 : true; changed(); },
-        extra: on && stacked
-          ? stepper({ value: Number(v) || 0, max: maxStacks, label: r.stacksLabel || 'stacks', onChange: (n) => { L.runes[id] = n; changed(); } })
-          : [manualTag(k, r.live), srcPill(r)],
-      });
-    };
-    const runeRow = el('div', { class: 'ctrl-row' },
-      el('span', { class: 'ctrl-label', text: 'Runes' }),
-      ['shardAH', 'transcendence', 'cosmic', 'ultimateHunter', 'jack', 'legendHaste', 'axiomArcanist'].map(runeCtl));
-
-    // Manual extras and formula inputs
-    const extraVal = (kind) => L.extra.find((e) => e.kind === kind)?.amount || 0;
-    const setExtra = (kind, amount) => {
-      L.extra = L.extra.filter((e) => e.kind !== kind);
-      if (amount) L.extra.push({ kind, amount, label: kind === 'ability' ? 'Manual ability haste' : 'Manual ultimate haste' });
-      save();
-      renderSideParts(k, { controls: false });
-      renderWindows();
-    };
-    const numBox = (label, value, onInput, max = 300) => el('label', { class: 'ctrl' }, label, ' ',
-      el('input', {
-        type: 'number', class: 'num num-sm', min: '0', max: String(max), step: '1', value: String(value || 0),
-        inputmode: 'numeric', oninput: (e) => onInput(Math.max(0, Math.min(max, Number(e.target.value) || 0))),
-      }));
-
-    const manualRow = el('div', { class: 'ctrl-row' },
-      el('span', { class: 'ctrl-label', text: 'Other' }),
-      numBox('+AH', extraVal('ability'), (v) => setExtra('ability', v)),
-      numBox('+Ult', extraVal('ultimate'), (v) => setExtra('ultimate', v)),
-      hasFormula ? numBox('Bonus AD', L.bonusAD, (v) => { L.bonusAD = v; save(); renderSideParts(k, { controls: false }); renderWindows(); }, 1000) : null,
-      hasFormula ? toggleChip({
-        on: ranged, text: ranged ? 'Ranged' : 'Melee', title: 'Endless Hunger scales 13% (melee) / 10% (ranged) of bonus AD',
-        onClick: () => { L.rangedOverride = !ranged; changed(); },
-      }) : null);
-
-    p.controls.append(
-      el('div', { class: 'ctrl-row' },
-        el('span', { class: 'ctrl-label', text: 'Items' }),
-        itemRows,
-        addSelect),
-      buffRow,
-      runeRow,
-      manualRow
-    );
-  }
-
-  /* --- totals + breakdown */
-
-  function renderSummary(k) {
-    const p = parts[k];
-    clear(p.summary);
-    const { totals, lines, notes } = hasteOf(k);
-    const pill = (label, v, cls = '') => el('span', { class: `total ${cls}${v ? '' : ' zero'}` },
-      el('span', { class: 'total-v', text: fmt(v) }), el('span', { class: 'total-l', text: label }));
-
-    const breakdown = el('details', { class: 'breakdown' },
-      el('summary', {},
-        pill('AH', totals.ability),
-        totals.basic ? pill('basic', totals.basic) : null,
-        pill('ult', totals.ultimate, 'ult'),
-        pill('summ.', totals.summoner, 'summ'),
-        el('span', { class: 'breakdown-hint', text: 'where from?' })),
-      lines.length
-        ? el('ul', { class: 'breakdown-list' }, lines.map((l) => el('li', {},
-          el('span', { class: 'b-amt', text: `+${fmt(l.amount)}` }),
-          el('span', { class: 'b-kind', text: KIND_SHORT[l.kind] }),
-          el('span', { class: 'b-src', text: l.label }),
-          l.hint ? el('span', { class: 'hint', text: `(${l.hint})` }) : null,
-          el('span', { class: `b-group g-${l.group}`, text: l.group }))))
-        : el('p', { class: 'hint', text: 'No haste yet. Add items, runes or objectives below.' }),
-      notes.map((n) => el('p', { class: 'note note-flag' }, el('strong', { text: `${n.label}: ` }), n.note)));
-    p.summary.append(breakdown);
   }
 
   /* --- cooldown table */
@@ -608,21 +692,18 @@ export function createMatchupView(ctx) {
     const rows = SLOTS.map((slot) => {
       const a = form.abilities[slot];
       if (!a) return null;
-      const noCd = !a.cooldown.length || a.cooldown.every((c) => c === 0);
+      const noCd = hasNoCooldown(a);
       const rank = slot === 'P' ? null : ranks[slot];
       const idx = cooldownIndex(a, lvl, rank);
       let value;
       if (noCd) value = el('span', { class: 'cd-pair cd-none', text: 'no cooldown' });
       else if (idx < 0) value = el('span', { class: 'cd-pair cd-none', text: 'not learned' });
-      else {
-        const cd = abilityCooldown(a, idx, totals);
-        value = cdPair(cd.base, cd.final, { static: cd.static });
-      }
+      else value = cdLine(abilityCooldown(a, idx, totals));
       const rankText = slot === 'P' ? (a.scaling === 'level' ? `L${lvl}` : '') : `${rank}/${a.maxrank}`;
       const isKey = keys.some((x) => x.slot === slot);
       return el(
         'div',
-        { class: `mu-cd${idx < 0 && !noCd ? ' unlearned' : ''}${isKey ? ' is-key' : ''}`, dataset: { slot } },
+        { class: `mu-cd${idx < 0 && !noCd ? ' unlearned' : ''}${isKey ? ' is-key' : ''}${a.ammo?.recharge ? ' has-charges' : ''}`, dataset: { slot } },
         el('span', { class: 'slot-key', text: slot }),
         icon(a.icon, '', 'icon icon-sm'),
         el('span', { class: 'mu-cd-name' }, el('span', { text: a.name }), staticTag(a), verifiedPill(a.verified)),
@@ -652,7 +733,7 @@ export function createMatchupView(ctx) {
     const p = parts[k];
     clear(p.sums);
     const { totals } = hasteOf(k);
-    const byId = Object.fromEntries(ctx.summoners.map((s) => [s.id, s]));
+    const byId = Object.fromEntries(ctx.summoners.map((x) => [x.id, x]));
     const rows = state[k].summoners.map((id, i) => {
       const s = byId[id] || ctx.summoners[0];
       const cd = summonerCooldown(s.cooldown, totals);
@@ -672,10 +753,13 @@ export function createMatchupView(ctx) {
 
   /* ---------------------------------------------------------- rendering */
 
-  function renderSideParts(k, { controls = true } = {}) {
+  function renderSideParts(k, { loadout = true } = {}) {
+    if (loadout) renderLoadout(k);
+    else {
+      const chip = parts[k].loadout.querySelector('.loadout-total');
+      if (chip) chip.replaceWith(totalsChip(hasteOf(k).totals));
+    }
     renderOrder(k);
-    renderSummary(k);
-    if (controls) renderControls(k);
     renderCds(k);
     renderSums(k);
   }
@@ -687,15 +771,13 @@ export function createMatchupView(ctx) {
 
   function renderDerived() {
     for (const { key } of SIDES) {
-      renderSummary(key);
-      renderCds(key);
-      renderSums(key);
+      renderSideParts(key, { loadout: false });
     }
     renderWindows();
   }
 
   function renderAll() {
-    renderBar();
+    renderTopBar();
     renderLevelBar();
     for (const { key } of SIDES) renderSide(key);
     renderWindows();
@@ -730,6 +812,7 @@ export function createMatchupView(ctx) {
     /** Phase 3 entry point: merge live data into one side. */
     setSide(k, patch) {
       state[k] = { ...state[k], ...patch, loadout: { ...state[k].loadout, ...(patch.loadout || {}) } };
+      state[k].loadout.items = dedupeItems(state[k].loadout.items);
       save();
       renderSide(k);
       renderWindows();

@@ -15,6 +15,11 @@ Open the link, type a champion name, read the numbers. That's it.
 
 - **Search is fuzzy.** `tk` finds Tahm Kench, `mf` finds Miss Fortune, `ww`
   finds Warwick, `j4` finds Jarvan IV, `trynd` finds Tryndamere.
+- **Lane filter** (All · Top · Jungle · Mid · Bot · Support) under the search
+  box narrows results to a lane; tap a lane with an empty box to browse its
+  whole roster. Champions who play several lanes appear under each. The same
+  filter applies in *Sort by cooldown* and the Matchup enemy picker, and your
+  last choice is remembered.
 - **Ability haste slider** updates every number live. The quick buttons
   (0 / 10 / 20 / 30 / 45 / 60) are the common breakpoints. **Ultimate haste** is
   a separate box and stacks on top of ability haste, for R only.
@@ -22,7 +27,11 @@ Open the link, type a champion name, read the numbers. That's it.
   (+18) and **Ionian Boots** (+10) to see real Flash and TP timers.
 - **Tap an ability** to expand its description, cost and range.
 - **Sort by cooldown** lists every ability in the game shortest-first, filtered
-  by rank, key and role — handy for "what else is up right now?".
+  by rank, key, role and lane — handy for "what else is up right now?".
+- **Charge abilities** (Teemo R, Vi E, Caitlyn W, Gangplank E…) show the
+  **recharge time per charge** as the main number — that's the wait once
+  they're out — e.g. *2 charges · 12s recharge (1s between casts)*, with the
+  between-casts delay small. Haste shortens the recharge.
 - **⚠ means don't fully trust that number.** Tap it to read why. See
   [Where the data is wrong](#where-the-data-is-wrong).
 - **↻ means the cooldown has a refund, reset or reduction** (Darius R resets
@@ -42,11 +51,17 @@ Pick **your** champion and the **enemy** side by side:
 - **Level** (1–18) sets both sides; untick *same level* to set them
   separately. Ability ranks follow a standard skill order (the strip of
   `Q E W Q Q R…` shows it). Change it per champion from the *Skill order* menu.
-- **Haste** per side: add items (haste values come straight from Riot's item
-  data), Hextech Drake stacks, blue buff, Infernal cinders, runes (AH shard,
-  Transcendence, Cosmic Insight, Ultimate Hunter + stacks, Jack of All Trades,
-  Legend: Haste) or a manual amount. The totals line shows AH / ult / summoner
-  haste — tap **where from?** for a line-by-line breakdown.
+- **Enemy loadout bar**, above the enemy's cooldowns, is built for entering
+  what they have mid-game, one-handed: a live total (*35 AH · 0 ult · 18
+  summ*), a big **level** stepper, a big **Hextech** counter, toggles for
+  **Blue buff, Cosmic, AH shard, Transcendence, Ult Hunter** (the last two
+  only appear once the level makes them matter), and a **grid of every item
+  that grants haste** — tap to add, tap the item up top to remove; a second
+  copy of a legendary or a second pair of boots can't be added. Items you've
+  entered for that champion before come first, then items that suit the
+  champion. **Reset** clears it. Everything applies instantly. Your own bar is
+  the same, collapsed by default. Rarer inputs (Jack of All Trades, Legend:
+  Haste, cinders, manual haste) sit under *More*.
 - **Every cooldown shows base → with haste**, e.g. `26 → 18.3s`.
 - **Trade windows** at the top: the enemy's key abilities and how long you
   have when they use them — *"Fiora W on cooldown → 24s → their defence is
@@ -163,13 +178,17 @@ written:
 |---|---|---|
 | Two forms merged into one entry | spell name contains `" / "` | **Form swap** |
 | A recast sharing one cooldown | same, for a known list of recasts | **Recast** |
-| Charge/ammo abilities | `maxammo` is set | **Charges** |
+| Charge/ammo abilities | `maxammo` is set, then checked (see below) | **Charges** |
 | No cooldown published | every rank is `0` | **No cooldown** |
 | Passives | Data Dragon publishes no passive cooldowns at all | muted `·` |
 
-The listed cooldown on a charge ability is only the delay *between casts* — the
-charges themselves refill on a separate, much longer timer, which Data Dragon
-does not publish.
+Data Dragon's cooldown on a charge ability is only the delay *between casts*;
+the recharge per charge — the number that matters — isn't published.
+`data/charges.json` supplies it (see [Lanes and charges](#lanes-and-charges)),
+so the app shows the recharge as the main number. It also found that
+Data Dragon's `maxammo` flag is wrong for several abilities: **Rengar Q/W/E**
+(published as 0.25s; really 6→4 / 16→10 / 10s) and **Karthus Q** (0s; really
+1s) are corrected; Kled Q, LeBlanc R and Warwick W are plain cooldowns.
 
 ### Corrected by hand in `overrides.json`
 
@@ -180,7 +199,6 @@ Verified against the LoL Wiki on patch 16.19 (each entry records its own
   cooldowns. Both forms are now listed separately, with their own numbers.
 - **Gnar** — both forms share cooldowns (so the numbers were right) but only
   the Mini names were published. Mega names added.
-- **Corki R / Teemo R** — real ammo maximums and recharge times added.
 - **Camille P** — 14/11/8 by champion level; no passive cooldowns exist in
   Data Dragon at all.
 - **Akali Q / R** — numbers are right but misleading (energy-gated; the R
@@ -318,6 +336,42 @@ Search aliases live in `data/nicknames.json`. Prefix matches (`trynd`) and
 initials (`mf`) are automatic, so only add genuinely irregular nicknames.
 
 ---
+
+## Lanes and charges
+
+Two generated files, rebuilt after each patch with:
+
+```bash
+node tools/sync-lanes-charges.mjs
+```
+
+The script pulls three sources and matches champions by numeric id:
+
+- **Meraki Analytics** (`cdn.merakianalytics.com`) — champion positions and
+  ability `rechargeRate`. It is the first source, but its data was last
+  updated in August 2025 (patch 15.x; it lacks the two newest champions), and
+  its CDN sends no CORS header, so the site could not load it from a browser
+  anyway.
+- **LoL Wiki** — `Module:ChampionData/data` (`client_positions` +
+  `external_positions`, updated for V26.19) and each ability's
+  `Template:Data_<Champion>/<Ability>` (`recharge`, `static`, maximum
+  charges). Every Meraki value is checked against it; where they disagree, or
+  Meraki has nothing, the wiki wins.
+- **Data Dragon** — which abilities are flagged `maxammo`, ranks, names.
+
+Output, committed and precached like the rest of the app:
+
+- `data/lanes.json` — lanes per champion (union of the wiki's client and
+  external positions). On 16.19: Meraki agreed on 164 of 173; the 9
+  differences (e.g. Corki now bot, Talon jungle, Locke and Zaahen missing from
+  Meraki) are listed in its `notes`.
+- `data/charges.json` — `charges` (19 real charge abilities with recharge per
+  rank, between-casts delay, max charges per rank), `notCharges` (flagged by
+  Data Dragon but ordinary cooldowns, with corrections), and `unverified`.
+
+Both carry `verifiedPatch`; `tools/stale-overrides.mjs` says when to rerun
+the script. **Don't hand-edit them** — corrections go in `overrides.json`: a
+champion's `"lanes": ["top", "jungle"]`, or an ability's `ammo`.
 
 ## Haste: how every cooldown is calculated
 
@@ -474,6 +528,7 @@ js/
   skill-order.js        level -> ability ranks
   matchup-state.js      matchup state <-> shareable URL
   ability-ui.js         shared cooldown display bits
+  lanes.js              lane filter chips + helpers
   search.js             fuzzy champion search
   store.js              localStorage settings
   ui.js                 DOM helpers
@@ -484,11 +539,14 @@ data/
   overrides.json        hand-verified corrections + cooldown mechanics
   haste-sources.json    runes, objectives, item exceptions (hand-verified)
   matchup.json          skill orders, key abilities, default pins
+  lanes.json            generated: lanes per champion
+  charges.json          generated: charge abilities, recharge times
   nicknames.json        search aliases
 tests/run.mjs           unit tests (node tests/run.mjs)
 tools/make-icons.mjs    regenerates the PNG icons
 tools/stale-overrides.mjs  lists overrides + haste sources to re-verify after a patch
 tools/stamp-build.mjs   validates data + stamps sw.js before a push
+tools/sync-lanes-charges.mjs  regenerates data/lanes.json + data/charges.json
 tools/hooks/pre-push    blocks pushing main without a fresh stamp
 ```
 

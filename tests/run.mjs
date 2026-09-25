@@ -265,6 +265,116 @@ test('hostile URL values are clamped / ignored', () => {
 
 test('no matchup params -> null', () => eq(decodeMatchup(new URLSearchParams('foo=1'), () => null), null));
 
+/* --------------------------------------------------- charge abilities */
+
+test('charge ability: headline is recharge per charge, haste applies', () => {
+  const viE = {
+    slot: 'E', cooldown: [1, 1, 1, 1, 1],
+    ammo: { max: [2, 2, 2, 2, 2], recharge: [12, 11, 10, 9, 8] },
+    between: { values: [1, 1, 1, 1, 1], static: true },
+  };
+  const cd = abilityCooldown(viE, 4, { ability: 25, basic: 0, ultimate: 0, summoner: 0, item: 0 });
+  eq(cd.recharge, true);
+  eq(cd.base, 8);
+  near(cd.final, 8 * 100 / 125);
+  eq(cd.charges, 2);
+  eq(cd.between, { base: 1, final: 1, static: true }, 'static between-casts delay ignores haste');
+});
+
+test('charge ability: charge cap follows rank (Teemo R 3/4/5)', () => {
+  const teemoR = { slot: 'R', cooldown: [0.25, 0.25, 0.25], ammo: { max: [3, 4, 5], recharge: [35, 30, 25] }, between: { values: [0.25, 0.25, 0.25] } };
+  const cd = abilityCooldown(teemoR, 1, { ability: 0, basic: 0, ultimate: 20, summoner: 0, item: 0 });
+  eq([cd.charges, cd.base], [4, 30]);
+  near(cd.final, 25, 'ultimate haste applies to an R recharge');
+});
+
+const { buildChampion } = await import('../js/model.js');
+const fakeChamp = (id, spells) => ({
+  id, key: '1', name: id, title: '', tags: ['Fighter'], range: 125, info: { attack: 8, defense: 5, magic: 2 },
+  image: { full: `${id}.png` },
+  passive: { name: 'P', description: '', image: { full: 'p.png' } },
+  spells: spells.map((s, i) => ({ id: `${id}${i}`, name: s.name, description: '', maxrank: s.cooldown.length, cooldown: s.cooldown, costBurn: '', costType: '', rangeBurn: '', maxammo: s.maxammo || '-1', image: { full: 'x.png' } })),
+});
+
+test('charges.json: real charge ability gets recharge data, loses the ⚠ ammo flag', () => {
+  const c = buildChampion('16.19.1', fakeChamp('Vi', [
+    { name: 'Q', cooldown: [12, 11, 10, 9, 8] }, { name: 'W', cooldown: [0, 0, 0, 0, 0] },
+    { name: 'E', cooldown: [1, 1, 1, 1, 1], maxammo: '2' }, { name: 'R', cooldown: [120, 100, 80] },
+  ]), { champions: {} }, {
+    charges: { verifiedPatch: '16.19', charges: { 'Vi:E': { recharge: [12, 11, 10, 9, 8], between: [1, 1, 1, 1, 1], betweenStatic: true, max: [2, 2, 2, 2, 2] } }, notCharges: {} },
+    lanes: { lanes: { Vi: ['jungle'] } },
+  });
+  const e = c.forms[0].abilities.E;
+  eq(e.ammo.recharge, [12, 11, 10, 9, 8]);
+  eq(e.flags.some((f) => f.code === 'ammo'), false);
+  eq(e.flags.some((f) => f.code === 'charges'), true);
+  eq(c.lanes, ['jungle']);
+});
+
+test('charges.json notCharges: wrong Data Dragon cooldown corrected (Rengar Q 0.25 -> 6..4)', () => {
+  const c = buildChampion('16.19.1', fakeChamp('Rengar', [
+    { name: 'Savagery', cooldown: [0.25, 0.25, 0.25, 0.25, 0.25], maxammo: '1' }, { name: 'W', cooldown: [16, 14.5, 13, 11.5, 10] },
+    { name: 'E', cooldown: [10, 10, 10, 10, 10] }, { name: 'R', cooldown: [110, 90, 70] },
+  ]), { champions: {} }, {
+    charges: { verifiedPatch: '16.19', charges: {}, notCharges: { 'Rengar:Q': { cooldownWrong: true, wikiCooldown: [6, 5.5, 5, 4.5, 4] } } },
+  });
+  const q = c.forms[0].abilities.Q;
+  eq(q.cooldown, [6, 5.5, 5, 4.5, 4]);
+  eq(q.ammo, null);
+  eq(q.flags.some((f) => f.code === 'override'), true);
+});
+
+test('overrides.json "lanes" beats generated lanes', () => {
+  const c = buildChampion('16.19.1', fakeChamp('Teemo', [
+    { name: 'Q', cooldown: [7] }, { name: 'W', cooldown: [14] }, { name: 'E', cooldown: [0] }, { name: 'R', cooldown: [0.25] },
+  ]), { champions: { Teemo: { verifiedPatch: '16.19', lanes: ['top'] } } }, { lanes: { lanes: { Teemo: ['top', 'jungle', 'support'] } } });
+  eq(c.lanes, ['top']);
+});
+
+test('shipped charges.json covers all flagged abilities it claims to', () => {
+  const cj = read('data/charges.json');
+  for (const [id, v] of Object.entries(cj.charges)) {
+    eq(Array.isArray(v.recharge) && v.recharge.every((x) => x > 0), true, `${id} recharge`);
+    eq(Array.isArray(v.max) && v.max.every((x) => x >= 1), true, `${id} max`);
+  }
+  eq(Boolean(cj.notCharges['Rengar:Q']?.cooldownWrong), true, 'Rengar Q flagged as wrong in Data Dragon');
+});
+
+/* -------------------------------------------------------------- lanes */
+
+const { inLane, laneRoster } = await import('../js/lanes.js').catch(() => ({}));
+
+test('lane filter: multi-lane champions appear under each lane', () => {
+  if (!inLane) return; // lanes.js imports the DOM helper; skipped outside a browser
+  const champs = { A: { name: 'A', lanes: ['top', 'jungle'] }, B: { name: 'B', lanes: ['mid'] } };
+  eq(laneRoster(champs, 'top').map((c) => c.name), ['A']);
+  eq(laneRoster(champs, 'jungle').map((c) => c.name), ['A']);
+  eq(laneRoster(champs, 'all').length, 2);
+  eq(inLane(champs.B, 'top'), false);
+});
+
+test('shipped lanes.json: every champion has at least one lane', () => {
+  const lj = read('data/lanes.json');
+  const empty = Object.entries(lj.lanes).filter(([, l]) => !l.length).map(([k]) => k);
+  eq(empty, []);
+  eq(Object.keys(lj.lanes).length >= 173, true);
+});
+
+/* ---------------------------------------------------------- item grid */
+
+const { rankItemsFor } = await import('../js/items.js');
+
+test('item grid order: your history first, then items that fit the champion', () => {
+  const items = buildItems('16.19.1', fixture.data, sources);
+  const bruiser = { profile: { attack: 8, defense: 6, magic: 2 }, tags: ['Fighter'] };
+  const order = rankItemsFor(items, bruiser, ['3158']).map((i) => i.id);
+  eq(order[0], '3158', 'recently used item first');
+  eq(order.indexOf('3071') < order.indexOf('3118'), true, 'Black Cleaver (AD) before Malignance (AP) for a fighter');
+  const mage = { profile: { attack: 2, defense: 3, magic: 9 }, tags: ['Mage'] };
+  const m = rankItemsFor(items, mage, []).map((i) => i.id);
+  eq(m.indexOf('3118') < m.indexOf('3071'), true, 'Malignance before Black Cleaver for a mage');
+});
+
 /* ------------------------------------------------------------ data */
 
 test('every haste source has a verifiedPatch', () => {

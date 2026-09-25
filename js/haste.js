@@ -153,12 +153,36 @@ export function hasteForSlot(slot, totals) {
   return totals.ability + totals.basic;
 }
 
-/** One ability's cooldown at a cooldown-array index, after haste. */
+const at = (arr, i) => (Array.isArray(arr) ? arr[Math.max(0, Math.min(i, arr.length - 1))] : arr);
+
+/**
+ * One ability's cooldown at a cooldown-array index, after haste.
+ *
+ * For a charge ability the headline number is the RECHARGE time per charge -
+ * that is how long you wait for the next use once charges run out - and
+ * ability haste shortens it. The delay between casts comes back as
+ * `between`, and the charge cap as `charges`:
+ *   { base: 16, final: 12.3, charges: 2, between: { base: 0.5, final: 0.5 } }
+ */
 export function abilityCooldown(ability, index, totals) {
-  const base = ability.cooldown[Math.max(0, Math.min(index, ability.cooldown.length - 1))];
+  const haste = ability.static ? 0 : hasteForSlot(ability.slot, totals);
+  if (ability.ammo?.recharge) {
+    const base = at(ability.ammo.recharge, index);
+    const b = at(ability.between?.values, index) ?? at(ability.cooldown, index);
+    const bStatic = ability.static || ability.between?.static;
+    return {
+      base,
+      final: applyHaste(base, haste),
+      haste,
+      static: ability.static,
+      recharge: true,
+      charges: at(ability.ammo.max, index),
+      between: { base: b, final: bStatic ? b : applyHaste(b, haste), static: Boolean(bStatic) },
+    };
+  }
+  const base = at(ability.cooldown, index);
   if (base === undefined) return { base: NaN, final: NaN, haste: 0, static: ability.static };
   if (ability.static) return { base, final: base, haste: 0, static: true };
-  const haste = hasteForSlot(ability.slot, totals);
   return { base, final: applyHaste(base, haste), haste, static: false };
 }
 

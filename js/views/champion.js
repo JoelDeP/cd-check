@@ -3,13 +3,14 @@
 import { el, clear, icon, flagBadge, verifiedPill } from '../ui.js';
 import { SLOTS, fmt } from '../model.js';
 import {
-  QUICK_HASTE, MAX_HASTE, applyHaste, hasteForSlot, abilityCooldown, summonerCooldown,
+  QUICK_HASTE, MAX_HASTE, abilityCooldown, summonerCooldown,
 } from '../haste.js';
 import {
-  staticTag, mechanicsBadge, mechanicsNotes, chipIndices, chipLabel,
+  staticTag, mechanicsBadge, mechanicsNotes, chipIndices, chipLabel, hasNoCooldown,
 } from '../ability-ui.js';
 import { settings, set } from '../store.js';
 import { searchChampions } from '../search.js';
+import { laneChips, inLane, laneRoster } from '../lanes.js';
 
 export function createChampionView(ctx) {
   const root = el('section', { id: 'view-champion', class: 'view' });
@@ -35,10 +36,33 @@ export function createChampionView(ctx) {
     role: 'listbox',
     hidden: true,
   });
+  const laneRow = el('div', { class: 'lane-row-wrap' });
   const searchWrap = el('div', { class: 'search-wrap' }, input, results);
 
   let matches = [];
   let active = -1;
+
+  /**
+   * Search, filtered by the remembered lane. Tapping a lane chip with an
+   * empty box lists that lane's whole roster to browse.
+   */
+  function runSearch(browse = false) {
+    const q = input.value.trim();
+    const lane = settings.lane || 'all';
+    if (q) matches = searchChampions(ctx.index, q, 80).filter((c) => inLane(c, lane)).slice(0, 8);
+    else matches = browse && lane !== 'all' ? laneRoster(ctx.champions, lane) : [];
+    active = matches.length ? 0 : -1;
+    renderResults();
+  }
+
+  function renderLaneRow() {
+    clear(laneRow).append(laneChips(settings.lane, (l) => {
+      set({ lane: l });
+      renderLaneRow();
+      input.focus();
+      runSearch(true);
+    }));
+  }
 
   function closeResults() {
     results.hidden = true;
@@ -83,12 +107,7 @@ export function createChampionView(ctx) {
     results.children[active]?.scrollIntoView({ block: 'nearest' });
   }
 
-  input.addEventListener('input', () => {
-    const q = input.value.trim();
-    matches = q ? searchChampions(ctx.index, q, 8) : [];
-    active = matches.length ? 0 : -1;
-    renderResults();
-  });
+  input.addEventListener('input', () => runSearch());
 
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
@@ -197,21 +216,35 @@ export function createChampionView(ctx) {
   /* ------------------------------------------------------------- abilities */
 
   function rankChips(ability, totals) {
-    const noCd = !ability.cooldown.length || ability.cooldown.every((c) => c === 0);
-    if (noCd) {
+    if (hasNoCooldown(ability)) {
       return [el('span', { class: 'chip chip-none', text: 'no cooldown' })];
     }
     return chipIndices(ability).map((i) => {
-      const { base, final } = abilityCooldown(ability, i, totals);
-      const changed = Math.abs(final - base) > 1e-9;
+      const cd = abilityCooldown(ability, i, totals);
+      const changed = Math.abs(cd.final - cd.base) > 1e-9;
       return el(
         'div',
-        { class: `rank${changed ? ' hasted' : ''}` },
+        { class: `rank${changed ? ' hasted' : ''}${cd.recharge ? ' rank-charges' : ''}` },
         el('span', { class: 'rank-n', text: chipLabel(ability, i) }),
-        el('span', { class: 'rank-cd', text: fmt(final) }),
-        changed ? el('span', { class: 'rank-base', text: fmt(base) }) : null
+        el('span', { class: 'rank-cd', text: fmt(cd.final) }),
+        changed ? el('span', { class: 'rank-base', text: fmt(cd.base) }) : null,
+        // Charge abilities: the big number is the recharge; cap and gap are secondary.
+        cd.recharge
+          ? el('span', { class: 'rank-sub', text: `${cd.charges}×${cd.between?.base ? ` · ${fmt(cd.between.final)}s gap` : ''}` })
+          : null
       );
     });
+  }
+
+  /** "2 charges · recharge per charge (0.5s between casts)" above the chips. */
+  function chargeCaption(ability, totals) {
+    if (!ability.ammo?.recharge) return null;
+    const cd = abilityCooldown(ability, chipIndices(ability).at(-1), totals);
+    const caps = [...new Set([].concat(ability.ammo.max))].join('/');
+    return el('p', { class: 'charge-caption' },
+      el('strong', { text: `${caps} charges` }),
+      ' · numbers are the recharge time per charge',
+      cd.between?.base ? el('span', { class: 'charge-gap', text: ` (${fmt(cd.between.final)}s between casts)` }) : null);
   }
 
   function abilityRow(ability, totals) {
@@ -242,8 +275,8 @@ export function createChampionView(ctx) {
         badge,
         el('span', { class: 'expand-caret', 'aria-hidden': 'true', text: '›' })
       ),
+      chargeCaption(ability, totals),
       el('div', { class: 'ranks' }, rankChips(ability, totals)),
-      ability.ammo ? ammoLine(ability, totals) : null,
       details
     );
 
@@ -281,28 +314,6 @@ export function createChampionView(ctx) {
     if (!value) return null;
     return el('div', { class: 'fact' },
       el('dt', { text: label }), el('dd', { text: value }));
-  }
-
-  function ammoLine(ability, totals) {
-    const { max, recharge } = ability.ammo;
-    // Charge recharge timers are reduced by haste like any other cooldown.
-    const h = ability.static ? 0 : hasteForSlot(ability.slot, totals);
-    const chips = recharge.map((r, i) =>
-      el(
-        'div',
-        { class: `rank rank-ammo${h > 0 ? ' hasted' : ''}` },
-        el('span', { class: 'rank-n', text: String(i + 1) }),
-        el('span', { class: 'rank-cd', text: fmt(applyHaste(r, h)) }),
-        h > 0 ? el('span', { class: 'rank-base', text: fmt(r) }) : null
-      )
-    );
-    const maxes = Array.isArray(max) ? max : [max];
-    return el(
-      'div',
-      { class: 'ranks ranks-ammo' },
-      el('span', { class: 'ammo-label', text: `recharge (max ${[...new Set(maxes)].join('/')})` }),
-      chips
-    );
   }
 
   /* ------------------------------------------------------------ champ card */
@@ -443,7 +454,8 @@ export function createChampionView(ctx) {
     ctx.onShow?.(champ);
   }
 
-  root.append(searchWrap, hastePanel, card, summonerPanel);
+  root.append(searchWrap, laneRow, hastePanel, card, summonerPanel);
+  renderLaneRow();
 
   syncHaste();
   renderSummoners();

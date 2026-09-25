@@ -72,6 +72,12 @@ for (const [champ, entry] of Object.entries(overrides.champions || {})) {
   if (!touched) check({ kind: 'champion', champ }, entryPatch);
 }
 
+// Generated files: fixed by rerunning their script, not by hand.
+for (const file of ['data/lanes.json', 'data/charges.json']) {
+  const j = JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+  check({ kind: 'haste', label: `${file} (generated)` }, j.verifiedPatch, { ours: 'rerun: node tools/sync-lanes-charges.mjs' });
+}
+
 // Haste sources: runes, buffs and item exceptions the calculator uses.
 const hasteSources = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/haste-sources.json'), 'utf8'));
 const grantText = (grants = []) => grants.map((g) => (g.byLevel

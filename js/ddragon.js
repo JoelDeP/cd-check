@@ -80,9 +80,9 @@ async function idbDelete(key) {
 /**
  * Bump when the trimmed shape changes, so cached data from an older app
  * version is refetched instead of read with fields missing.
- * v2: champion attack range, item.json.
+ * v2: champion attack range, item.json.  v3: champion info ratings.
  */
-const DATA_VERSION = 2;
+const DATA_VERSION = 3;
 const keyFor = (patch, name) => `${patch}:v${DATA_VERSION}:${name}`;
 
 /** Drop every cached entry that is not this patch in this data version. */
@@ -110,6 +110,7 @@ function trimChampion(c) {
     tags: c.tags,
     partype: c.partype,
     range: c.stats?.attackrange ?? 125,
+    info: c.info ? { attack: c.info.attack, defense: c.info.defense, magic: c.info.magic } : undefined,
     image: { full: c.image.full },
     passive: {
       name: c.passive.name,

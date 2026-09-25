@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "schemaNotes": "Every champion and summoner entry carries verifiedPatch (major.minor). When the live patch is newer, the UI shows a verified-on badge. An ability may set its own verifiedPatch to override its champion. Ability fields: name, cooldown, scaling (rank|level|flat), levelBreaks, levelRange [lvl1, lvl18] (linear by level), static (ability haste does not apply), ammo, note, unreliable, mechanics (short notes on refunds/resets/reductions shown in the UI). List stale entries with: node tools/stale-overrides.mjs",
+  "schemaNotes": "Every champion and summoner entry carries verifiedPatch (major.minor). When the live patch is newer, the UI shows a verified-on badge. An ability may set its own verifiedPatch to override its champion. Champion field: lanes ([\"top\",\"jungle\",\"mid\",\"bot\",\"support\"]) overrides data/lanes.json. Charge-ability data comes from data/charges.json; an ability-level ammo here still wins. Ability fields: name, cooldown, scaling (rank|level|flat), levelBreaks, levelRange [lvl1, lvl18] (linear by level), static (ability haste does not apply), ammo, note, unreliable, mechanics (short notes on refunds/resets/reductions shown in the UI). List stale entries with: node tools/stale-overrides.mjs",
   "source": "wiki.leagueoflegends.com, cross-checked against Data Dragon championFull.json",
   "readme": "See README.md -> 'Editing overrides.json'. Anything listed here replaces or augments Data Dragon and is marked with a warning badge in the UI. Auto-detected problems (merged form names, ammo abilities, zero cooldowns) are flagged by the app without needing an entry here.",
   "summoners": {
@@ -43,32 +43,6 @@
         "R": {
           "note": "Recast (second dash) has its own static 2.5s cooldown within 10s of the first cast; it does not use the 120/90/60 timer.",
           "unreliable": true
-        }
-      }
-    },
-    "Corki": {
-      "verifiedPatch": "16.19",
-      "abilities": {
-        "R": {
-          "note": "Charge-based. The listed cooldown is only the delay between casts; missiles regenerate on their own timer. Every third missile is 'The Big One'.",
-          "cooldown": [2, 2, 2],
-          "ammo": {
-            "max": [4, 4, 4],
-            "recharge": [20, 20, 20]
-          }
-        }
-      }
-    },
-    "Teemo": {
-      "verifiedPatch": "16.19",
-      "abilities": {
-        "R": {
-          "note": "Charge-based. The listed cooldown is only the delay between casts; traps regenerate on their own timer.",
-          "cooldown": [0.25, 0.25, 0.25],
-          "ammo": {
-            "max": [3, 4, 5],
-            "recharge": [35, 30, 25]
-          }
         }
       }
     },

@@ -17,6 +17,40 @@ export function cdPair(base, final, { static: isStatic = false } = {}) {
   );
 }
 
+/**
+ * The full cooldown readout for one abilityCooldown() result. Ordinary
+ * abilities: the base → final pair. Charge abilities:
+ *   "2 charges · 16 → 12.3s recharge (0.5s between casts)"
+ * with the between-casts delay small and secondary.
+ */
+export function cdLine(cd) {
+  if (!cd?.recharge) return cdPair(cd.base, cd.final, { static: cd.static });
+  const gap = cd.between && cd.between.base > 0
+    ? el('span', { class: 'charge-gap', text: `(${fmt(cd.between.final)}s between casts)` })
+    : null;
+  return el(
+    'span',
+    { class: 'cd-line cd-line-charges' },
+    el('span', { class: 'charge-count', text: `${cd.charges} charge${cd.charges === 1 ? '' : 's'} ·` }),
+    cdPair(cd.base, cd.final, { static: cd.static }),
+    el('span', { class: 'charge-word', text: 'recharge' }),
+    gap
+  );
+}
+
+/** Plain-text version for callouts and toasts. */
+export function cdText(cd) {
+  if (!cd?.recharge) return `${fmt(cd.final)}s`;
+  const gap = cd.between && cd.between.base > 0 ? ` (${fmt(cd.between.final)}s between casts)` : '';
+  return `${cd.charges} charges · ${fmt(cd.final)}s recharge${gap}`;
+}
+
+/** Whether an ability has nothing to show (no cooldown and no recharge). */
+export function hasNoCooldown(ability) {
+  if (ability.ammo?.recharge) return false;
+  return !ability.cooldown.length || ability.cooldown.every((c) => c === 0);
+}
+
 /** Tag for cooldowns that ability haste does not touch. */
 export function staticTag(ability) {
   if (!ability.static) return null;

@@ -83,12 +83,51 @@ export function buildItems(patch, itemsRaw, sources) {
       icon: img.item(patch, it.image?.full || `${id}.png`),
       gold: it.gold?.total || 0,
       group,
+      tags,
       grants,
       note: exc?.note || '',
       formula: Boolean(exc?.formula),
     };
   }
   return out;
+}
+
+/**
+ * Order items for a champion's quick grid. Real "most bought" data only
+ * exists on stats sites (not used), and Data Dragon's recommended sets are
+ * empty, so: items this user added for this champion before come first (most
+ * recent first), then items whose stats fit Riot's attack / magic / defense
+ * ratings for the champion, then legendaries before components.
+ */
+export function rankItemsFor(items, champ, history = []) {
+  const p = champ?.profile || { attack: 5, magic: 5, defense: 5 };
+  const ad = p.attack >= p.magic;
+  const ap = p.magic > p.attack;
+  const tanky = p.defense >= 6;
+  const support = (champ?.tags || []).includes('Support');
+  const fit = (it) => {
+    const t = new Set(it.tags || []);
+    let s = 0;
+    if (t.has('Damage') || t.has('ArmorPenetration')) s += ad ? 3 : -2;
+    if (t.has('SpellDamage') || t.has('MagicPenetration')) s += ap ? 3 : -2;
+    if (t.has('CriticalStrike')) s += ad && !tanky ? 1 : -2;
+    if (t.has('Health') || t.has('Armor') || t.has('SpellBlock')) s += tanky ? 2 : 0;
+    if (t.has('Aura') || t.has('ManaRegen')) s += support ? 2 : 0;
+    if (it.group === 'Boots') s += 2;
+    if (it.grants?.some((g) => g.kind === 'ultimate' || g.kind === 'basic')) s += 1;
+    return s;
+  };
+  const recency = (it) => {
+    const i = history.indexOf(it.id);
+    return i < 0 ? 0 : 100 - i;
+  };
+  const tier = { Boots: 1, Legendary: 2, Epic: 1, Basic: 0 };
+  return Object.values(items).sort((a, b) =>
+    recency(b) - recency(a)
+    || fit(b) - fit(a)
+    || (tier[b.group] ?? 0) - (tier[a.group] ?? 0)
+    || b.gold - a.gold
+    || a.name.localeCompare(b.name));
 }
 
 /** One-line summary of an item's haste: "15 AH, 20 ult". */

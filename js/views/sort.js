@@ -4,6 +4,7 @@ import { el, clear, icon, flagBadge, verifiedPill } from '../ui.js';
 import { fmt, flattenAbilities } from '../model.js';
 import { abilityCooldown } from '../haste.js';
 import { staticTag, mechanicsBadge } from '../ability-ui.js';
+import { laneChips, inLane } from '../lanes.js';
 import { settings, set } from '../store.js';
 
 const ROLES = ['All', 'Fighter', 'Tank', 'Mage', 'Assassin', 'Marksman', 'Support'];
@@ -61,7 +62,11 @@ export function createSortView(ctx) {
         ROLES,
         (v) => (s.role === 'all' ? v === 'All' : s.role === v),
         (v) => set({ sort: { ...s, role: v === 'All' ? 'all' : v } })
-      )
+      ),
+      // Lane is shared with the search boxes: one remembered filter per user.
+      el('div', { class: 'filter' },
+        el('span', { class: 'filter-label', text: 'Lane' }),
+        laneChips(settings.lane, (l) => { set({ lane: l }); renderFilters(); render(); }))
     );
   }
 
@@ -83,10 +88,12 @@ export function createSortView(ctx) {
     for (const row of rows) {
       if (!s.keys.includes(row.slot)) continue;
       if (s.role !== 'all' && !row.champ.tags.includes(s.role)) continue;
+      if (!inLane(row.champ, settings.lane)) continue;
       const i = rankIndex(row.ability);
-      const { base, final } = abilityCooldown(row.ability, i, totals);
-      if (!base) continue;
-      picked.push({ ...row, rank: i + 1, base, eff: final });
+      // Charge abilities sort by their recharge per charge.
+      const cd = abilityCooldown(row.ability, i, totals);
+      if (!cd.base) continue;
+      picked.push({ ...row, rank: i + 1, base: cd.base, eff: cd.final, cd });
     }
 
     picked.sort((a, b) =>
@@ -147,6 +154,7 @@ export function createSortView(ctx) {
       staticTag(p.ability),
       verifiedPill(p.ability.verified),
       mechanicsBadge(p.ability),
+      p.cd.recharge ? el('span', { class: 'cd-row-charges', text: `${p.cd.charges} charges · recharge${p.cd.between?.base ? ` (${fmt(p.cd.between.final)}s between)` : ''}` }) : null,
       el('span', { class: 'cd-row-rank', text: changed ? `r${p.rank} · base ${fmt(p.base)}` : `r${p.rank}` }),
       flagBadge(p.ability.flags.filter((f) => f.code !== 'passive'))
     );

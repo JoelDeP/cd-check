@@ -32,7 +32,7 @@ export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel
  * 'passive' and 'none' are missing data rather than wrong data, so they get a
  * muted info dot instead of a loud warning triangle.
  */
-const INFO_CODES = new Set(['passive', 'none']);
+const INFO_CODES = new Set(['passive', 'none', 'charges']);
 
 export function flagBadge(flags) {
   if (!flags || !flags.length) return null;
