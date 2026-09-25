@@ -87,11 +87,22 @@ in use is shown in the header; it turns amber when you're offline and reading
 cached data.
 
 Champion and spell art is loaded straight from Data Dragon and cached by the
-service worker. Those URLs contain the patch, so they're immutable and cached
-forever.
+service worker. Those URLs contain the patch, so they never change; when a new
+patch arrives, the previous patch's art is deleted.
+
+After the first load, once the browser is idle, the service worker also
+**caches every champion's square icon in the background** (~170 images, about
+4 MB), so search results and cards show art even offline. It skips anything
+already cached, so later visits cost nothing, and it doesn't run when the
+device has Data Saver on. Ability icons are cached as you view them.
+
+Art is fetched in CORS mode rather than as the `<img>` tag's own opaque
+request: opaque responses can't be checked for success, and Chrome bills each
+one as ~7 MB of storage quota.
 
 **First load** is roughly 2 MB (mostly `championFull.json`, which gzips to a
-few hundred KB). Every load after that, on the same patch, is free.
+few hundred KB) plus the background icon download. Every load after that, on
+the same patch, is free.
 
 ---
 

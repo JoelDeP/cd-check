@@ -66,13 +66,83 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
-});
-
 function isDDragonImage(url) {
   return url.hostname === 'ddragon.leagueoflegends.com' && /\/img\//.test(url.pathname);
 }
+
+/**
+ * Fetch Data Dragon art in CORS mode (Riot sends the headers). An <img> tag's
+ * own request is no-cors, which yields an opaque response: its `ok` is always
+ * false, so it was never cached, and Chrome would bill each one as ~7 MB of
+ * quota if it were. A CORS response caches at its real size and is still fine
+ * to hand back to the <img>.
+ */
+async function fetchArt(url) {
+  try {
+    return await fetch(url, { mode: 'cors', credentials: 'omit' });
+  } catch {
+    return fetch(url);
+  }
+}
+
+const IMG_PATCH_RE = /\/cdn\/(\d+\.\d+\.\d+)\/img\//;
+
+/**
+ * Background-cache a batch of Data Dragon images (the page sends every
+ * champion square after first load). Drops art from other patches first -
+ * those URLs are never requested again - and skips anything already cached,
+ * so repeating this on every load is cheap.
+ */
+async function precacheImages(urls, patch) {
+  const cache = await caches.open(IMG_CACHE);
+  for (const req of await cache.keys()) {
+    const m = req.url.match(IMG_PATCH_RE);
+    if (m && m[1] !== patch) await cache.delete(req);
+  }
+  const have = new Set((await cache.keys()).map((r) => r.url));
+  const todo = urls.filter((u) => {
+    try {
+      return isDDragonImage(new URL(u)) && !have.has(u);
+    } catch {
+      return false;
+    }
+  });
+
+  let fetched = 0;
+  let failed = 0;
+  let next = 0;
+  // A few at a time: done in seconds, gentle on a phone connection.
+  const worker = async () => {
+    while (next < todo.length) {
+      const url = todo[next++];
+      try {
+        const res = await fetchArt(url);
+        if (res.ok) {
+          await cache.put(url, res);
+          fetched += 1;
+        } else {
+          failed += 1;
+        }
+      } catch {
+        failed += 1;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+  return { requested: urls.length, alreadyCached: urls.length - todo.length, fetched, failed };
+}
+
+self.addEventListener('message', (event) => {
+  const msg = event.data || {};
+  if (msg.type === 'SKIP_WAITING') self.skipWaiting();
+  if (msg.type === 'PRECACHE_IMAGES' && Array.isArray(msg.urls) && msg.patch) {
+    event.waitUntil(
+      precacheImages(msg.urls, msg.patch).then((result) => {
+        event.source?.postMessage({ type: 'PRECACHE_IMAGES_DONE', patch: msg.patch, ...result });
+      })
+    );
+  }
+});
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -84,10 +154,10 @@ self.addEventListener('fetch', (event) => {
   if (isDDragonImage(url)) {
     event.respondWith(
       caches.open(IMG_CACHE).then(async (cache) => {
-        const hit = await cache.match(request);
+        const hit = await cache.match(request.url);
         if (hit) return hit;
-        const res = await fetch(request);
-        if (res.ok) cache.put(request, res.clone());
+        const res = await fetchArt(request.url);
+        if (res.ok) cache.put(request.url, res.clone());
         return res;
       }).catch(() => fetch(request))
     );

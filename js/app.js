@@ -133,15 +133,34 @@ async function main() {
 
   if (activeTab === 'champion') championView.focusSearch();
 
-  registerServiceWorker();
+  if (registerServiceWorker()) {
+    precacheChampionIcons(Object.values(champions).map((c) => c.icon), data.patch);
+  }
+}
+
+/**
+ * Once the UI is up and the browser is idle, ask the service worker to cache
+ * every champion square (~170 small PNGs, a few MB) so search results and
+ * cards have art offline. The worker skips what it already has, so this is
+ * near-free on later visits. Honours Data Saver.
+ */
+function precacheChampionIcons(urls, patch) {
+  if (navigator.connection?.saveData) return;
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 3000));
+  idle(() => {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.active?.postMessage({ type: 'PRECACHE_IMAGES', patch, urls }))
+      .catch(() => {});
+  }, { timeout: 8000 });
 }
 
 /* --------------------------------------------------------- service worker */
 
 const IS_LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
+/** @returns {boolean} whether a service worker is (being) registered */
 function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!('serviceWorker' in navigator)) return false;
 
   // Locally the worker's cache-first shell would serve stale files on every
   // edit, so it stays off unless you ask for it with ?sw=1.
@@ -150,7 +169,7 @@ function registerServiceWorker() {
       .then((rs) => rs.forEach((r) => r.unregister()))
       .catch(() => {});
     caches?.keys?.().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
-    return;
+    return false;
   }
 
   navigator.serviceWorker.register('./sw.js', { scope: './' }).then((reg) => {
@@ -189,6 +208,7 @@ function registerServiceWorker() {
     reloading = true;
     location.reload();
   });
+  return true;
 }
 
 function showUpdateBanner(sw) {
