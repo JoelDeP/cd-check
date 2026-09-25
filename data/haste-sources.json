@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "readme": "Every haste source the calculator (js/haste.js) knows about, except item stats, which are parsed from Data Dragon item.json at runtime so they follow each patch automatically. Each entry carries verifiedPatch (major.minor); once the live patch is newer the UI marks it 'verified on X'. List stale entries with: node tools/stale-overrides.mjs. The live field says what Phase 3 can auto-fill from the Live Client API: a data path, 'self-only' (your own full rune page is exposed, enemies show only keystone + trees, so theirs stay manual), or null (never exposed: always manual). A grant is { kind, amount | perStack | byLevel, ... } where kind is one of: ability (all abilities), basic (Q/W/E only), ultimate (R only), summoner, item. Formula: cooldown x 100 / (100 + haste). Abilities flagged static in overrides.json ignore haste entirely.",
+
+  "itemExceptions": {
+    "2517": {
+      "name": "Endless Hunger",
+      "verifiedPatch": "16.19",
+      "source": "wiki: Endless Hunger (Famine)",
+      "formula": { "kind": "ability", "base": 5, "perBonusAD": { "melee": 0.13, "ranged": 0.10 } },
+      "note": "5 + 13% bonus AD (10% ranged) ability haste. Uses the side's bonus AD field."
+    },
+    "4005": {
+      "name": "Imperial Mandate",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon item.json 16.19.1",
+      "note": "+20 ability haste on abilities with an immobilizing effect only - not applied automatically."
+    },
+    "6616": {
+      "name": "Staff of Flowing Water",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon item.json 16.19.1",
+      "note": "Healing/shielding an ally grants you both +15 ability haste for 6s - temporary, not applied."
+    },
+    "2522": {
+      "name": "Actualizer",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon item.json 16.19.1",
+      "note": "While Empowered, basic ability cooldowns progress 30% faster - not applied."
+    },
+    "6675": {
+      "name": "Navori Flickerblade",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon item.json 16.19.1",
+      "note": "Attacks reduce basic ability cooldowns by 15% of their remaining cooldown - real cooldowns are shorter than shown."
+    },
+    "6696": {
+      "name": "Axiom Arc",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon item.json 16.19.1",
+      "note": "A champion you damaged dying within 3s refunds part of your ultimate's cooldown."
+    }
+  },
+
+  "buffs": [
+    {
+      "id": "hextech",
+      "name": "Hextech Drake stacks",
+      "short": "Hextech",
+      "verifiedPatch": "16.19",
+      "source": "wiki: Hextech Prowess / Dragon Slayer",
+      "grants": [{ "kind": "ability", "perStack": 5, "maxStacks": 4 }],
+      "live": "dragonKills.HEXTECH",
+      "note": "5 ability haste per Hextech Drake your team has slain (max 4). Hextech Soul does not affect cooldowns. No other drake, soul, Elder, Baron or Atakhan grants haste."
+    },
+    {
+      "id": "blue",
+      "name": "Blue buff (Crest of Insight)",
+      "short": "Blue",
+      "verifiedPatch": "16.19",
+      "source": "wiki: Crest of Insight ({{pp|10;15;20|1;6;11}}, changed in 26.14)",
+      "grants": [{ "kind": "ability", "byLevel": { "levels": [1, 6, 11], "values": [10, 15, 20] } }],
+      "live": null,
+      "note": "10 / 15 / 20 ability haste at champion level 1 / 6 / 11, for 120s. The Live Client API cannot see buffs, so this stays manual."
+    },
+    {
+      "id": "cinders",
+      "name": "Infernal Cinders (Infernal Rift only)",
+      "short": "Cinders",
+      "verifiedPatch": "16.19",
+      "source": "wiki: Infernal Cinder",
+      "grants": [{ "kind": "ability", "perStack": 1, "maxStacks": 20 }],
+      "live": null,
+      "note": "1 ability haste per cinder picked up. Only spawn when the map becomes the Infernal Rift. Holding more than 5 when you die drops half of the extra."
+    }
+  ],
+
+  "runes": [
+    {
+      "id": "cosmic",
+      "runeId": 8347,
+      "name": "Cosmic Insight",
+      "short": "Cosmic",
+      "tree": "Inspiration",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon runesReforged.json 16.19.1",
+      "grants": [{ "kind": "summoner", "amount": 18 }, { "kind": "item", "amount": 10 }],
+      "live": "self-only"
+    },
+    {
+      "id": "transcendence",
+      "runeId": 8210,
+      "name": "Transcendence",
+      "short": "Transc.",
+      "tree": "Sorcery",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon runesReforged.json 16.19.1",
+      "grants": [
+        { "kind": "ability", "amount": 5, "fromLevel": 5 },
+        { "kind": "ability", "amount": 5, "fromLevel": 8 }
+      ],
+      "live": "self-only",
+      "note": "Level 11+: a champion takedown reduces the remaining cooldown of basic abilities by 20% (not modelled)."
+    },
+    {
+      "id": "ultimateHunter",
+      "runeId": 8106,
+      "name": "Ultimate Hunter",
+      "short": "Ult Hunter",
+      "tree": "Domination",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon runesReforged.json 16.19.1; wiki: Ultimate Hunter (31 at 5 stacks)",
+      "grants": [{ "kind": "ultimate", "amount": 6 }, { "kind": "ultimate", "perStack": 5, "maxStacks": 5 }],
+      "stacksLabel": "Bounty Hunter stacks",
+      "live": "self-only",
+      "note": "6 ultimate haste + 5 per Bounty Hunter stack (first takedown on each enemy champion, max 5)."
+    },
+    {
+      "id": "jack",
+      "runeId": 8316,
+      "name": "Jack of All Trades",
+      "short": "Jack",
+      "tree": "Inspiration",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon runesReforged.json 16.19.1; wiki: Jack of All Trades",
+      "grants": [{ "kind": "ability", "perStack": 1, "maxStacks": 20 }],
+      "stacksLabel": "unique item stats",
+      "live": "self-only",
+      "note": "1 ability haste per different stat type gained from items. No cap."
+    },
+    {
+      "id": "legendHaste",
+      "runeId": 9105,
+      "name": "Legend: Haste",
+      "short": "Legend: Haste",
+      "tree": "Precision",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon runesReforged.json 16.19.1",
+      "grants": [{ "kind": "basic", "perStack": 1.5, "maxStacks": 10 }],
+      "stacksLabel": "Legend stacks",
+      "live": "self-only",
+      "note": "1.5 basic ability haste per Legend stack (max 10). Does not affect the ultimate."
+    },
+    {
+      "id": "shardAH",
+      "runeId": 5007,
+      "name": "Stat shard: Ability Haste",
+      "short": "Shard +8",
+      "tree": "Shard",
+      "verifiedPatch": "16.19",
+      "source": "wiki: Rune (League of Legends) - offense row only",
+      "grants": [{ "kind": "ability", "amount": 8 }],
+      "live": "self-only"
+    },
+    {
+      "id": "axiomArcanist",
+      "runeId": 8224,
+      "name": "Axiom Arcanist",
+      "short": "Axiom",
+      "tree": "Sorcery",
+      "verifiedPatch": "16.19",
+      "source": "Data Dragon runesReforged.json 16.19.1",
+      "grants": [],
+      "live": "self-only",
+      "note": "A champion takedown reduces your ultimate's current cooldown by 7% (not modelled - no permanent haste)."
+    }
+  ]
+}

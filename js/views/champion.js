@@ -3,9 +3,11 @@
 import { el, clear, icon, flagBadge, verifiedPill } from '../ui.js';
 import { SLOTS, fmt } from '../model.js';
 import {
-  QUICK_HASTE, MAX_HASTE, SUMMONER_HASTE_SOURCES,
-  applyHaste, hasteForSlot, summonerHaste,
+  QUICK_HASTE, MAX_HASTE, applyHaste, hasteForSlot, abilityCooldown, summonerCooldown,
 } from '../haste.js';
+import {
+  staticTag, mechanicsBadge, mechanicsNotes, chipIndices, chipLabel,
+} from '../ability-ui.js';
 import { settings, set } from '../store.js';
 import { searchChampions } from '../search.js';
 
@@ -165,9 +167,9 @@ export function createChampionView(ctx) {
     quickRow.querySelectorAll('.chip-quick').forEach((b) => {
       b.classList.toggle('on', Number(b.dataset.haste) === settings.abilityHaste);
     });
-    const total = settings.abilityHaste + settings.ultimateHaste;
-    ultTotal.textContent = settings.ultimateHaste
-      ? `R uses ${total} haste`
+    const t = ctx.tabHaste().totals;
+    ultTotal.textContent = t.ultimate
+      ? `R uses ${t.ability + t.ultimate} haste`
       : 'R uses ability haste';
   }
 
@@ -194,29 +196,25 @@ export function createChampionView(ctx) {
 
   /* ------------------------------------------------------------- abilities */
 
-  function rankChips(ability, ah, uh) {
-    const h = hasteForSlot(ability.slot, ah, uh);
+  function rankChips(ability, totals) {
     const noCd = !ability.cooldown.length || ability.cooldown.every((c) => c === 0);
     if (noCd) {
       return [el('span', { class: 'chip chip-none', text: 'no cooldown' })];
     }
-    const isLevel = ability.scaling === 'level';
-    return ability.cooldown.map((base, i) => {
-      const eff = applyHaste(base, h);
-      const label = isLevel && ability.levelBreaks
-        ? `L${ability.levelBreaks[i]}${ability.levelBreaks[i + 1] ? '–' + (ability.levelBreaks[i + 1] - 1) : '+'}`
-        : String(i + 1);
+    return chipIndices(ability).map((i) => {
+      const { base, final } = abilityCooldown(ability, i, totals);
+      const changed = Math.abs(final - base) > 1e-9;
       return el(
         'div',
-        { class: `rank${h > 0 ? ' hasted' : ''}` },
-        el('span', { class: 'rank-n', text: label }),
-        el('span', { class: 'rank-cd', text: fmt(eff) }),
-        h > 0 ? el('span', { class: 'rank-base', text: fmt(base) }) : null
+        { class: `rank${changed ? ' hasted' : ''}` },
+        el('span', { class: 'rank-n', text: chipLabel(ability, i) }),
+        el('span', { class: 'rank-cd', text: fmt(final) }),
+        changed ? el('span', { class: 'rank-base', text: fmt(base) }) : null
       );
     });
   }
 
-  function abilityRow(ability, ah, uh) {
+  function abilityRow(ability, totals) {
     const badge = flagBadge(ability.flags);
     const details = el('div', { class: 'ability-details', hidden: true });
 
@@ -238,12 +236,14 @@ export function createChampionView(ctx) {
         icon(ability.icon, ability.name),
         el('span', { class: 'slot-key', text: ability.slot }),
         el('span', { class: 'ability-name', text: ability.name }),
+        staticTag(ability),
         verifiedPill(ability.verified),
+        mechanicsBadge(ability),
         badge,
         el('span', { class: 'expand-caret', 'aria-hidden': 'true', text: '›' })
       ),
-      el('div', { class: 'ranks' }, rankChips(ability, ah, uh)),
-      ability.ammo ? ammoLine(ability, ah, uh) : null,
+      el('div', { class: 'ranks' }, rankChips(ability, totals)),
+      ability.ammo ? ammoLine(ability, totals) : null,
       details
     );
 
@@ -263,6 +263,7 @@ export function createChampionView(ctx) {
             fact('Max rank', ability.maxrank > 1 ? String(ability.maxrank) : null)
           ),
           ability.note ? el('p', { class: 'note', text: ability.note }) : null,
+          ...mechanicsNotes(ability),
           ...ability.flags.map((f) =>
             el('p', { class: 'note note-flag' }, el('strong', { text: `${f.label}: ` }), f.text)
           )
@@ -282,9 +283,10 @@ export function createChampionView(ctx) {
       el('dt', { text: label }), el('dd', { text: value }));
   }
 
-  function ammoLine(ability, ah, uh) {
+  function ammoLine(ability, totals) {
     const { max, recharge } = ability.ammo;
-    const h = hasteForSlot(ability.slot, ah, uh);
+    // Charge recharge timers are reduced by haste like any other cooldown.
+    const h = ability.static ? 0 : hasteForSlot(ability.slot, totals);
     const chips = recharge.map((r, i) =>
       el(
         'div',
@@ -312,8 +314,7 @@ export function createChampionView(ctx) {
   function renderCard() {
     clear(card);
     if (!current) return;
-    const ah = settings.abilityHaste;
-    const uh = settings.ultimateHaste;
+    const { totals } = ctx.tabHaste();
     const form = current.forms[Math.min(formIndex, current.forms.length - 1)];
 
     card.append(
@@ -355,7 +356,7 @@ export function createChampionView(ctx) {
     const list = el('div', { class: 'abilities' });
     for (const slot of SLOTS) {
       const a = form.abilities[slot];
-      if (a) list.append(abilityRow(a, ah, uh));
+      if (a) list.append(abilityRow(a, totals));
     }
     card.append(list);
   }
@@ -366,10 +367,8 @@ export function createChampionView(ctx) {
 
   function renderSummoners() {
     clear(summonerPanel);
-    const h = summonerHaste({
-      cosmic: settings.cosmicInsight,
-      ionian: settings.ionianBoots,
-    });
+    const { totals } = ctx.tabHaste();
+    const h = totals.summoner;
 
     summonerPanel.append(
       el(
@@ -379,7 +378,7 @@ export function createChampionView(ctx) {
         el(
           'div',
           { class: 'quick-row' },
-          SUMMONER_HASTE_SOURCES.map((src) =>
+          ctx.tabSummonerToggles.map((src) =>
             el('button', {
               type: 'button',
               class: `chip${settingFor(src.id) ? ' on' : ''}`,
@@ -401,7 +400,7 @@ export function createChampionView(ctx) {
 
     const grid = el('div', { class: 'summoner-grid' });
     for (const s of ctx.summoners) {
-      const eff = applyHaste(s.cooldown, h);
+      const eff = summonerCooldown(s.cooldown, totals).final;
       grid.append(
         el(
           'div',

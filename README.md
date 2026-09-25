@@ -25,14 +25,43 @@ Open the link, type a champion name, read the numbers. That's it.
   by rank, key and role — handy for "what else is up right now?".
 - **⚠ means don't fully trust that number.** Tap it to read why. See
   [Where the data is wrong](#where-the-data-is-wrong).
+- **↻ means the cooldown has a refund, reset or reduction** (Darius R resets
+  on a kill, Fiora Q refunds half on hit, Master Yi Q drops 1s per auto…). Tap
+  it for the details. The number shown is the plain, un-refunded cooldown.
+- **`STATIC`** means ability haste does not affect that cooldown at all
+  (Yasuo and Yone Q, Camille's passive…), so it never changes with haste.
 - **Install it**: Chrome/Edge show an install button in the address bar;
   on iOS use Share → Add to Home Screen. After that it opens offline.
 
-Keyboard: <kbd>/</kbd> focus search · <kbd>Esc</kbd> clear · <kbd>1</kbd> /
-<kbd>2</kbd> switch tabs · <kbd>↑</kbd><kbd>↓</kbd><kbd>Enter</kbd> pick a result.
+### Matchup tab
 
-Your haste settings and last champion are saved in your own browser's
-localStorage. Nothing is stored on a server, and there is no server.
+Pick **your** champion and the **enemy** side by side:
+
+- **Quick picks** (Renekton, Camille, Jax by default) sit under each search
+  box. Tap ☆ next to a champion's name to pin or unpin it — your own list.
+- **Level** (1–18) sets both sides; untick *same level* to set them
+  separately. Ability ranks follow a standard skill order (the strip of
+  `Q E W Q Q R…` shows it). Change it per champion from the *Skill order* menu.
+- **Haste** per side: add items (haste values come straight from Riot's item
+  data), Hextech Drake stacks, blue buff, Infernal cinders, runes (AH shard,
+  Transcendence, Cosmic Insight, Ultimate Hunter + stacks, Jack of All Trades,
+  Legend: Haste) or a manual amount. The totals line shows AH / ult / summoner
+  haste — tap **where from?** for a line-by-line breakdown.
+- **Every cooldown shows base → with haste**, e.g. `26 → 18.3s`.
+- **Trade windows** at the top: the enemy's key abilities and how long you
+  have when they use them — *"Fiora W on cooldown → 24s → their defence is
+  down: all-in window"*. Tap ☆ on any enemy ability to add or remove it.
+- **★ Save** keeps a matchup in your favourites; **Copy link** gives a URL
+  that opens that exact matchup — champions, level, skill orders, items, runes,
+  everything — e.g. `?me=renekton&vs=darius&lvl=6`.
+
+Keyboard: <kbd>/</kbd> focus search · <kbd>Esc</kbd> clear · <kbd>1</kbd>
+<kbd>2</kbd> <kbd>3</kbd> switch tabs · <kbd>↑</kbd><kbd>↓</kbd><kbd>Enter</kbd>
+pick a result.
+
+Your settings, pinned champions, skill orders, favourites and last matchup are
+saved in your own browser's localStorage. Nothing is stored on a server, and
+there is no server.
 
 ---
 
@@ -56,7 +85,20 @@ Then open <http://127.0.0.1:8731/>.
 
 **The service worker is disabled on localhost** so your edits show up on
 reload instead of being served from a stale cache. To test the real PWA
-behaviour locally, add `?sw=1` to the URL.
+behaviour locally, add `?sw=1` to the URL. (Python's server sends no cache
+headers, so Chrome may still reuse an old copy of a JS file; if a change
+doesn't show up, hard-reload with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>.)
+
+### Tests
+
+```bash
+node tests/run.mjs
+```
+
+No dependencies. Covers the haste calculator (every source, static
+cooldowns, slot rules), item-haste parsing against real Data Dragon 16.19 text
+in `tests/fixtures/`, skill orders (including Jayce's and Nidalee's odd
+ultimates), and matchup-link encoding, including hostile input.
 
 ### Regenerating the icons
 
@@ -222,6 +264,32 @@ you leave out falls back to the Data Dragon value:
 }
 ```
 
+**Cooldown mechanics and static cooldowns** (shown as ↻ and `STATIC`):
+
+```jsonc
+"Yasuo": {
+  "verifiedPatch": "16.19",
+  "abilities": {
+    "Q": {
+      "static": true,
+      "mechanics": ["4s down to 1.33s with bonus attack speed - shown value is the maximum."]
+    }
+  }
+},
+"Aatrox": {
+  "verifiedPatch": "16.19",
+  "abilities": {
+    "P": { "levelRange": [22, 10], "static": true, "mechanics": ["..."] }
+  }
+}
+```
+
+`static: true` makes the calculator ignore haste for that ability.
+`levelRange: [atLevel1, atLevel18]` is a cooldown that shrinks linearly with
+champion level (the wiki's "22 – 10 (based on level)"). `scaling: "flat"`
+is one value regardless of rank or level. Keep `mechanics` notes short and say
+what the shown number represents ("shown value is the maximum").
+
 Other fields: `maxrank`, `unreliable: true` (flag it without changing the
 number), `verifiedPatch` on a single ability (wins over its champion's — use
 it when you re-check one slot but not the rest), and under `summoners`, the
@@ -248,6 +316,86 @@ never flagged — they're always current by definition.
 
 Search aliases live in `data/nicknames.json`. Prefix matches (`trynd`) and
 initials (`mf`) are automatic, so only add genuinely irregular nicknames.
+
+---
+
+## Haste: how every cooldown is calculated
+
+All cooldowns in the app — Champion tab, Sort view, Matchup — go through one
+module, `js/haste.js`:
+
+```
+final = base × 100 / (100 + haste)
+```
+
+Haste comes in kinds that apply to different things, and stack additively:
+
+| Kind | Applies to | Examples |
+|---|---|---|
+| ability | Q, W, E, R (passives only if not static) | most items, Hextech, blue buff, AH shard |
+| basic | Q, W, E only | Spear of Shojin, Legend: Haste |
+| ultimate | R only | Malignance, Hexplate, Ultimate Hunter |
+| summoner | summoner spells | Ionian Boots, Crimson Lucidity, Cosmic Insight |
+| item | item actives (tracked, not shown) | Cosmic Insight |
+
+Where the numbers come from:
+
+- **Items** — parsed from Data Dragon `item.json` at runtime, so they follow
+  every patch with no edits: the stats block ("15 Ability Haste") plus
+  unconditional passive lines ("Gain 20 Ultimate Ability Haste."). Conditional
+  effects (Imperial Mandate's +20 on immobilizing abilities, Staff of Flowing
+  Water's temporary +15) are deliberately **not** counted.
+- **Everything else** — `data/haste-sources.json`, hand-verified per patch.
+
+### Editing `haste-sources.json`
+
+Three sections, each entry with its own `verifiedPatch` (they go stale and get
+the same *verified on 16.19* badge as overrides, and `tools/stale-overrides.mjs`
+lists them too):
+
+```jsonc
+"buffs": [{
+  "id": "blue", "name": "Blue buff (Crest of Insight)", "verifiedPatch": "16.19",
+  "grants": [{ "kind": "ability", "byLevel": { "levels": [1, 6, 11], "values": [10, 15, 20] } }]
+}],
+"runes": [{
+  "id": "ultimateHunter", "runeId": 8106, "verifiedPatch": "16.19",
+  "grants": [{ "kind": "ultimate", "amount": 6 }, { "kind": "ultimate", "perStack": 5, "maxStacks": 5 }]
+}],
+"itemExceptions": {
+  "2517": { "name": "Endless Hunger", "verifiedPatch": "16.19",
+            "formula": { "kind": "ability", "base": 5, "perBonusAD": { "melee": 0.13, "ranged": 0.10 } } }
+}
+```
+
+A grant is `amount` (flat, optionally `fromLevel`), `perStack` + `maxStacks`,
+or `byLevel`. Verified on 16.19: Hextech 5 AH/stack (max 4; no other drake,
+soul, Elder, Baron or Atakhan grants haste), blue buff 10/15/20 at levels
+1/6/11, Infernal cinders 1 AH each, AH shard 8 (offense row only), Cosmic
+Insight 18 summoner + 10 item, Transcendence +5 at 5 and +5 at 8, Ultimate
+Hunter 6 + 5 per stack (31 max), Jack of All Trades 1 per stack, Legend: Haste
+1.5 basic per stack (max 10).
+
+### Editing `matchup.json`
+
+Gameplay defaults, not patch data — edit freely: `pinnedDefault` (everyone's
+starting quick picks), `skillOrders` (`"max": "QEW"`, optional `"start"`),
+`keys` (each champion's trade-window abilities with a `role`: defensive,
+escape, engage, cc, trade or execute) and `roleText` (the callout wording).
+Champions without an entry use max Q > E > W and no keys.
+
+### Designed for Phase 3 (in-game timers)
+
+- A side's haste inputs are a plain JSON *loadout* (`items`, `buffs`,
+  `runes`, `extra`, `level`), so the Live Client bridge can fill it field by
+  field through `matchupView.setSide('vs', {...})`.
+- Each source in `haste-sources.json` has a `live` field saying what the API
+  can fill: a data path (Hextech stacks from dragon kills), `self-only` (the
+  API gives your own full rune page but only the enemy's keystone) or `null`
+  (never exposed: blue buff, cinders). When a live game is connected, fields
+  the API can't fill are labelled **manual**.
+- `rescaleRemaining(remaining, oldHaste, newHaste)` in `js/haste.js` keeps a
+  running timer correct when the enemy's haste changes mid-countdown.
 
 ---
 
@@ -321,17 +469,25 @@ js/
   ddragon.js            Data Dragon fetch + IndexedDB cache
   model.js              normalisation, overrides, reliability flags
   patch.js              patch comparison / staleness
-  haste.js              cooldown maths
+  haste.js              THE haste calculator - every cooldown goes through it
+  items.js              item haste parsed from Data Dragon item.json
+  skill-order.js        level -> ability ranks
+  matchup-state.js      matchup state <-> shareable URL
+  ability-ui.js         shared cooldown display bits
   search.js             fuzzy champion search
   store.js              localStorage settings
   ui.js                 DOM helpers
   views/champion.js     main view
+  views/matchup.js      matchup view
   views/sort.js         sort-by-cooldown view
 data/
-  overrides.json        hand-verified corrections
+  overrides.json        hand-verified corrections + cooldown mechanics
+  haste-sources.json    runes, objectives, item exceptions (hand-verified)
+  matchup.json          skill orders, key abilities, default pins
   nicknames.json        search aliases
+tests/run.mjs           unit tests (node tests/run.mjs)
 tools/make-icons.mjs    regenerates the PNG icons
-tools/stale-overrides.mjs  lists overrides to re-verify after a patch
+tools/stale-overrides.mjs  lists overrides + haste sources to re-verify after a patch
 tools/stamp-build.mjs   validates data + stamps sw.js before a push
 tools/hooks/pre-push    blocks pushing main without a fresh stamp
 ```

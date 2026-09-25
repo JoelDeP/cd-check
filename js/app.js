@@ -2,9 +2,14 @@
 
 import { loadDataDragon } from './ddragon.js';
 import { buildAllChampions, buildSummoners } from './model.js';
-import { buildSearchIndex } from './search.js';
+import { buildSearchIndex, searchChampions } from './search.js';
+import { buildItems } from './items.js';
+import { computeHaste } from './haste.js';
+import { decodeMatchup } from './matchup-state.js';
 import { createChampionView } from './views/champion.js';
 import { createSortView } from './views/sort.js';
+import { createMatchupView } from './views/matchup.js';
+import { settings } from './store.js';
 import { el, clear, $ } from './ui.js';
 
 const statusEl = $('#status');
@@ -32,9 +37,11 @@ async function main() {
   status('Loading…');
 
   let data;
-  const [overrides, nicknames] = await Promise.all([
+  const [overrides, nicknames, hasteSources, matchupData] = await Promise.all([
     getJson('./data/overrides.json', { champions: {}, summoners: {} }),
     getJson('./data/nicknames.json', { aliases: {} }),
+    getJson('./data/haste-sources.json', { buffs: [], runes: [], itemExceptions: {} }),
+    getJson('./data/matchup.json', { skillOrders: {}, keys: {}, pinnedDefault: [] }),
   ]);
 
   try {
@@ -61,20 +68,62 @@ async function main() {
   patchEl.classList.toggle('stale', data.stale);
   status(data.stale ? 'Offline — cached data' : '', data.stale ? 'warn' : '');
 
-  const ctx = { patch: data.patch, champions, summoners, index };
+  // The one haste calculator's data: live-parsed items + hand-verified sources.
+  const hasteCtx = { sources: hasteSources, items: buildItems(data.patch, data.items, hasteSources) };
+
+  // The Champion and Sort tabs share one simple loadout: the slider is your
+  // total ability haste, plus ultimate haste and the two summoner toggles.
+  const cosmicSummoner = hasteSources.runes?.find((r) => r.id === 'cosmic')
+    ?.grants.find((g) => g.kind === 'summoner')?.amount ?? 18;
+  const ionianSummoner = hasteCtx.items['3158']?.grants.find((g) => g.kind === 'summoner')?.amount ?? 10;
+  const tabSummonerToggles = [
+    { id: 'cosmic', short: 'Cosmic', name: 'Cosmic Insight (rune)', haste: cosmicSummoner },
+    { id: 'ionian', short: 'Ionian', name: 'Ionian Boots of Lucidity (summoner haste part)', haste: ionianSummoner },
+  ];
+  const tabHaste = () => computeHaste({
+    level: 18,
+    runes: settings.cosmicInsight ? { cosmic: true } : {},
+    extra: [
+      { kind: 'ability', amount: settings.abilityHaste, label: 'Ability haste slider' },
+      { kind: 'ultimate', amount: settings.ultimateHaste, label: 'Ultimate haste' },
+      ...(settings.ionianBoots ? [{ kind: 'summoner', amount: ionianSummoner, label: 'Ionian Boots' }] : []),
+    ],
+  }, hasteCtx);
+
+  const resolveChamp = (name) => {
+    if (!name) return null;
+    const lower = name.toLowerCase();
+    const exact = Object.keys(champions).find((id) => id.toLowerCase() === lower);
+    return exact || searchChampions(index, name, 1)[0]?.id || null;
+  };
+
+  const ctx = {
+    patch: data.patch, champions, summoners, index, hasteCtx, matchupData, tabHaste, tabSummonerToggles,
+    decodeQuery: (q) => decodeMatchup(new URLSearchParams(q), resolveChamp),
+  };
 
   const sortView = createSortView({
     ...ctx,
     onPickChampion: (id) => { championView.show(id); showTab('champion'); },
   });
   const championView = createChampionView(ctx);
+  const matchupView = createMatchupView(ctx);
 
-  clear(mainEl).append(championView.el, sortView.el);
+  // A shared matchup link (?me=renekton&vs=darius&lvl=6) opens that exact
+  // state, then the query is dropped so later edits aren't overwritten on reload.
+  const linked = decodeMatchup(new URLSearchParams(location.search), resolveChamp);
+  if (linked) {
+    matchupView.setState(linked);
+    history.replaceState(null, '', `${location.pathname}#matchup`);
+  }
+
+  clear(mainEl).append(championView.el, sortView.el, matchupView.el);
 
   /* ------------------------------------------------------------------ tabs */
 
   const TABS = [
     { id: 'champion', label: 'Champion', view: championView },
+    { id: 'matchup', label: 'Matchup', view: matchupView },
     { id: 'sort', label: 'Sort by cooldown', view: sortView },
   ];
   let activeTab = 'champion';
@@ -91,7 +140,9 @@ async function main() {
     }
     if (id === 'sort') sortView.refresh();
     if (id === 'champion') championView.refresh();
-    location.hash = id === 'champion' ? '' : `#${id}`;
+    if (id === 'matchup') matchupView.refresh();
+    const hash = id === 'champion' ? '' : `#${id}`;
+    if (location.hash !== hash) history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
   }
 
   clear(tabsEl).append(
@@ -107,7 +158,7 @@ async function main() {
     )
   );
 
-  const tabFromHash = () => (location.hash === '#sort' ? 'sort' : 'champion');
+  const tabFromHash = () => ({ '#sort': 'sort', '#matchup': 'matchup' })[location.hash] || 'champion';
   showTab(tabFromHash());
   window.addEventListener('hashchange', () => {
     const want = tabFromHash();
@@ -128,7 +179,8 @@ async function main() {
       showTab('champion');
       championView.focusSearch();
     } else if (e.key === '1') showTab('champion');
-    else if (e.key === '2') showTab('sort');
+    else if (e.key === '2') showTab('matchup');
+    else if (e.key === '3') showTab('sort');
   });
 
   if (activeTab === 'champion') championView.focusSearch();

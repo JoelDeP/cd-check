@@ -2,7 +2,8 @@
 
 import { el, clear, icon, flagBadge, verifiedPill } from '../ui.js';
 import { fmt, flattenAbilities } from '../model.js';
-import { applyHaste, hasteForSlot } from '../haste.js';
+import { abilityCooldown } from '../haste.js';
+import { staticTag, mechanicsBadge } from '../ability-ui.js';
 import { settings, set } from '../store.js';
 
 const ROLES = ['All', 'Fighter', 'Tank', 'Mage', 'Assassin', 'Marksman', 'Support'];
@@ -74,18 +75,18 @@ export function createSortView(ctx) {
 
   function render() {
     const s = settings.sort;
-    const ah = settings.abilityHaste;
-    const uh = settings.ultimateHaste;
+    const { totals } = ctx.tabHaste();
+    const ah = totals.ability;
+    const uh = totals.ultimate;
 
     const picked = [];
     for (const row of rows) {
       if (!s.keys.includes(row.slot)) continue;
       if (s.role !== 'all' && !row.champ.tags.includes(s.role)) continue;
       const i = rankIndex(row.ability);
-      const base = row.ability.cooldown[i];
+      const { base, final } = abilityCooldown(row.ability, i, totals);
       if (!base) continue;
-      const eff = applyHaste(base, hasteForSlot(row.slot, ah, uh));
-      picked.push({ ...row, rank: i + 1, base, eff });
+      picked.push({ ...row, rank: i + 1, base, eff: final });
     }
 
     picked.sort((a, b) =>
@@ -108,8 +109,7 @@ export function createSortView(ctx) {
           el(
             'div',
             { class: 'cd-group-head' },
-            el('span', { class: 'cd-group-cd', text: `${key}s` }),
-            ah || uh ? el('span', { class: 'cd-group-base', text: `base ${fmt(p.base)}` }) : null
+            el('span', { class: 'cd-group-cd', text: `${key}s` })
           )
         );
         list.append(group);
@@ -123,21 +123,31 @@ export function createSortView(ctx) {
   }
 
   function abilityChip(p) {
+    // A div with button semantics: it contains its own badge buttons, and
+    // buttons may not nest.
+    const open = () => ctx.onPickChampion?.(p.champ.id);
+    const changed = Math.abs(p.eff - p.base) > 1e-9;
     return el(
-      'button',
+      'div',
       {
-        type: 'button',
         class: 'cd-row',
+        role: 'button',
+        tabindex: '0',
         title: `${p.champ.name} ${p.slot} — rank ${p.rank}`,
-        onclick: () => ctx.onPickChampion?.(p.champ.id),
+        onclick: open,
+        onkeydown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+        },
       },
       icon(p.ability.icon, '', 'icon icon-sm'),
       el('span', { class: 'cd-row-champ', text: p.champ.name }),
       p.form.short ? el('span', { class: 'cd-row-form', text: p.form.short }) : null,
       el('span', { class: 'slot-key slot-key-sm', text: p.slot }),
       el('span', { class: 'cd-row-name', text: p.ability.name }),
+      staticTag(p.ability),
       verifiedPill(p.ability.verified),
-      el('span', { class: 'cd-row-rank', text: `r${p.rank}` }),
+      mechanicsBadge(p.ability),
+      el('span', { class: 'cd-row-rank', text: changed ? `r${p.rank} · base ${fmt(p.base)}` : `r${p.rank}` }),
       flagBadge(p.ability.flags.filter((f) => f.code !== 'passive'))
     );
   }

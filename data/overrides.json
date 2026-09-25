@@ -1,9 +1,8 @@
 {
   "schema": 1,
-  "schemaNotes": "Every champion and summoner entry carries verifiedPatch (major.minor). When the live patch is newer, the UI shows a verified-on badge. An ability may set its own verifiedPatch to override its champion. List stale entries with: node tools/stale-overrides.mjs",
+  "schemaNotes": "Every champion and summoner entry carries verifiedPatch (major.minor). When the live patch is newer, the UI shows a verified-on badge. An ability may set its own verifiedPatch to override its champion. Ability fields: name, cooldown, scaling (rank|level|flat), levelBreaks, levelRange [lvl1, lvl18] (linear by level), static (ability haste does not apply), ammo, note, unreliable, mechanics (short notes on refunds/resets/reductions shown in the UI). List stale entries with: node tools/stale-overrides.mjs",
   "source": "wiki.leagueoflegends.com, cross-checked against Data Dragon championFull.json",
   "readme": "See README.md -> 'Editing overrides.json'. Anything listed here replaces or augments Data Dragon and is marked with a warning badge in the UI. Auto-detected problems (merged form names, ammo abilities, zero cooldowns) are flagged by the app without needing an entry here.",
-
   "summoners": {
     "SummonerTeleport": {
       "verifiedPatch": "16.19",
@@ -17,7 +16,6 @@
       }
     }
   },
-
   "champions": {
     "Camille": {
       "verifiedPatch": "16.19",
@@ -27,11 +25,14 @@
           "cooldown": [14, 11, 8],
           "scaling": "level",
           "levelBreaks": [1, 7, 13],
-          "note": "Data Dragon publishes no cooldown for any passive. This one scales with champion level, not rank."
+          "note": "Data Dragon publishes no cooldown for any passive. This one scales with champion level, not rank.",
+          "static": true,
+          "mechanics": [
+            "Static: ability haste does not affect it. The cooldown starts after the shield expires or breaks."
+          ]
         }
       }
     },
-
     "Akali": {
       "verifiedPatch": "16.19",
       "abilities": {
@@ -45,29 +46,32 @@
         }
       }
     },
-
     "Corki": {
       "verifiedPatch": "16.19",
       "abilities": {
         "R": {
           "note": "Charge-based. The listed cooldown is only the delay between casts; missiles regenerate on their own timer. Every third missile is 'The Big One'.",
           "cooldown": [2, 2, 2],
-          "ammo": { "max": [4, 4, 4], "recharge": [20, 20, 20] }
+          "ammo": {
+            "max": [4, 4, 4],
+            "recharge": [20, 20, 20]
+          }
         }
       }
     },
-
     "Teemo": {
       "verifiedPatch": "16.19",
       "abilities": {
         "R": {
           "note": "Charge-based. The listed cooldown is only the delay between casts; traps regenerate on their own timer.",
           "cooldown": [0.25, 0.25, 0.25],
-          "ammo": { "max": [3, 4, 5], "recharge": [35, 30, 25] }
+          "ammo": {
+            "max": [3, 4, 5],
+            "recharge": [35, 30, 25]
+          }
         }
       }
     },
-
     "Jayce": {
       "verifiedPatch": "16.19",
       "note": "Data Dragon merges Jayce's two weapon stances into one entry per slot and publishes only the Hammer values. The two stances have fully independent cooldowns.",
@@ -76,25 +80,56 @@
           "name": "Mercury Hammer",
           "short": "Hammer",
           "abilities": {
-            "Q": { "name": "To the Skies!", "from": 0, "cooldown": [16, 14, 12, 10, 8, 6] },
-            "W": { "name": "Lightning Field", "from": 1, "cooldown": [10, 10, 10, 10, 10, 10] },
-            "E": { "name": "Thundering Blow", "from": 2, "cooldown": [20, 18, 16, 14, 12, 10] },
-            "R": { "name": "Transform: Mercury Cannon", "from": 3, "cooldown": [6] }
+            "Q": {
+              "name": "To the Skies!",
+              "from": 0,
+              "cooldown": [16, 14, 12, 10, 8, 6]
+            },
+            "W": {
+              "name": "Lightning Field",
+              "from": 1,
+              "cooldown": [10, 10, 10, 10, 10, 10]
+            },
+            "E": {
+              "name": "Thundering Blow",
+              "from": 2,
+              "cooldown": [20, 18, 16, 14, 12, 10]
+            },
+            "R": {
+              "name": "Transform: Mercury Cannon",
+              "from": 3,
+              "cooldown": [6]
+            }
           }
         },
         {
           "name": "Mercury Cannon",
           "short": "Cannon",
           "abilities": {
-            "Q": { "name": "Shock Blast", "from": 0, "cooldown": [8, 8, 8, 8, 8, 8] },
-            "W": { "name": "Hyper Charge", "from": 1, "cooldown": [13, 11.4, 9.8, 8.2, 6.6, 5] },
-            "E": { "name": "Acceleration Gate", "from": 2, "cooldown": [16, 16, 16, 16, 16, 16] },
-            "R": { "name": "Transform: Mercury Hammer", "from": 3, "cooldown": [6] }
+            "Q": {
+              "name": "Shock Blast",
+              "from": 0,
+              "cooldown": [8, 8, 8, 8, 8, 8]
+            },
+            "W": {
+              "name": "Hyper Charge",
+              "from": 1,
+              "cooldown": [13, 11.4, 9.8, 8.2, 6.6, 5]
+            },
+            "E": {
+              "name": "Acceleration Gate",
+              "from": 2,
+              "cooldown": [16, 16, 16, 16, 16, 16]
+            },
+            "R": {
+              "name": "Transform: Mercury Hammer",
+              "from": 3,
+              "cooldown": [6]
+            }
           }
         }
       ]
     },
-
     "Nidalee": {
       "verifiedPatch": "16.19",
       "note": "Data Dragon merges Human and Cougar abilities into one entry per slot and publishes only the Human values. Cougar abilities scale with Aspect of the Cougar's rank, not with the Human ability's rank.",
@@ -103,25 +138,62 @@
           "name": "Human Form",
           "short": "Human",
           "abilities": {
-            "Q": { "name": "Javelin Toss", "from": 0, "cooldown": [6, 6, 6, 6, 6] },
-            "W": { "name": "Bushwhack", "from": 1, "cooldown": [13, 12, 11, 10, 9] },
-            "E": { "name": "Primal Surge", "from": 2, "cooldown": [12, 12, 12, 12, 12] },
-            "R": { "name": "Aspect of the Cougar", "from": 3, "cooldown": [3, 3, 3, 3] }
+            "Q": {
+              "name": "Javelin Toss",
+              "from": 0,
+              "cooldown": [6, 6, 6, 6, 6]
+            },
+            "W": {
+              "name": "Bushwhack",
+              "from": 1,
+              "cooldown": [13, 12, 11, 10, 9]
+            },
+            "E": {
+              "name": "Primal Surge",
+              "from": 2,
+              "cooldown": [12, 12, 12, 12, 12]
+            },
+            "R": {
+              "name": "Aspect of the Cougar",
+              "from": 3,
+              "cooldown": [3, 3, 3, 3]
+            }
           }
         },
         {
           "name": "Cougar Form",
           "short": "Cougar",
           "abilities": {
-            "Q": { "name": "Takedown", "from": 0, "cooldown": [6, 6, 6, 6], "maxrank": 4, "note": "Ranks with Aspect of the Cougar (R)." },
-            "W": { "name": "Pounce", "from": 1, "cooldown": [6, 6, 6, 6], "maxrank": 4, "note": "Ranks with Aspect of the Cougar (R)." },
-            "E": { "name": "Swipe", "from": 2, "cooldown": [6, 6, 6, 6], "maxrank": 4, "note": "Ranks with Aspect of the Cougar (R)." },
-            "R": { "name": "Aspect of the Cougar: Human", "from": 3, "cooldown": [3, 3, 3, 3] }
+            "Q": {
+              "name": "Takedown",
+              "from": 0,
+              "cooldown": [6, 6, 6, 6],
+              "maxrank": 4,
+              "note": "Ranks with Aspect of the Cougar (R)."
+            },
+            "W": {
+              "name": "Pounce",
+              "from": 1,
+              "cooldown": [6, 6, 6, 6],
+              "maxrank": 4,
+              "note": "Ranks with Aspect of the Cougar (R)."
+            },
+            "E": {
+              "name": "Swipe",
+              "from": 2,
+              "cooldown": [6, 6, 6, 6],
+              "maxrank": 4,
+              "note": "Ranks with Aspect of the Cougar (R)."
+            },
+            "R": {
+              "name": "Aspect of the Cougar: Human",
+              "from": 3,
+              "cooldown": [3, 3, 3, 3]
+            }
           }
         }
       ]
     },
-
     "Elise": {
       "verifiedPatch": "16.19",
       "note": "Data Dragon merges Human and Spider abilities into one entry per slot and publishes only the Human values.",
@@ -130,25 +202,56 @@
           "name": "Human Form",
           "short": "Human",
           "abilities": {
-            "Q": { "name": "Neurotoxin", "from": 0, "cooldown": [6, 6, 6, 6, 6] },
-            "W": { "name": "Volatile Spiderling", "from": 1, "cooldown": [12, 12, 12, 12, 12] },
-            "E": { "name": "Cocoon", "from": 2, "cooldown": [12, 11.5, 11, 10.5, 10] },
-            "R": { "name": "Spider Form", "from": 3, "cooldown": [3, 3, 3, 3] }
+            "Q": {
+              "name": "Neurotoxin",
+              "from": 0,
+              "cooldown": [6, 6, 6, 6, 6]
+            },
+            "W": {
+              "name": "Volatile Spiderling",
+              "from": 1,
+              "cooldown": [12, 12, 12, 12, 12]
+            },
+            "E": {
+              "name": "Cocoon",
+              "from": 2,
+              "cooldown": [12, 11.5, 11, 10.5, 10]
+            },
+            "R": {
+              "name": "Spider Form",
+              "from": 3,
+              "cooldown": [3, 3, 3, 3]
+            }
           }
         },
         {
           "name": "Spider Form",
           "short": "Spider",
           "abilities": {
-            "Q": { "name": "Venomous Bite", "from": 0, "cooldown": [6, 6, 6, 6, 6] },
-            "W": { "name": "Skittering Frenzy", "from": 1, "cooldown": [6, 6, 6, 6, 6] },
-            "E": { "name": "Rappel", "from": 2, "cooldown": [22, 21, 20, 19, 18] },
-            "R": { "name": "Human Form", "from": 3, "cooldown": [3, 3, 3, 3] }
+            "Q": {
+              "name": "Venomous Bite",
+              "from": 0,
+              "cooldown": [6, 6, 6, 6, 6]
+            },
+            "W": {
+              "name": "Skittering Frenzy",
+              "from": 1,
+              "cooldown": [6, 6, 6, 6, 6]
+            },
+            "E": {
+              "name": "Rappel",
+              "from": 2,
+              "cooldown": [22, 21, 20, 19, 18]
+            },
+            "R": {
+              "name": "Human Form",
+              "from": 3,
+              "cooldown": [3, 3, 3, 3]
+            }
           }
         }
       ]
     },
-
     "RekSai": {
       "verifiedPatch": "16.19",
       "note": "Data Dragon merges Burrowed and Unburrowed abilities into one entry per slot and publishes only the Unburrowed values.",
@@ -157,23 +260,47 @@
           "name": "Unburrowed",
           "short": "Above",
           "abilities": {
-            "Q": { "name": "Queen's Wrath", "from": 0, "cooldown": [4, 3.5, 3, 2.5, 2] },
-            "W": { "name": "Burrow", "from": 1, "cooldown": [4, 4, 4, 4, 4] },
-            "E": { "name": "Furious Bite", "from": 2, "cooldown": [6, 6, 6, 6, 6] }
+            "Q": {
+              "name": "Queen's Wrath",
+              "from": 0,
+              "cooldown": [4, 3.5, 3, 2.5, 2]
+            },
+            "W": {
+              "name": "Burrow",
+              "from": 1,
+              "cooldown": [4, 4, 4, 4, 4]
+            },
+            "E": {
+              "name": "Furious Bite",
+              "from": 2,
+              "cooldown": [6, 6, 6, 6, 6]
+            }
           }
         },
         {
           "name": "Burrowed",
           "short": "Burrowed",
           "abilities": {
-            "Q": { "name": "Prey Seeker", "from": 0, "cooldown": [10, 10, 10, 10, 10] },
-            "W": { "name": "Un-burrow", "from": 1, "cooldown": [1, 1, 1, 1, 1] },
-            "E": { "name": "Tunnel", "from": 2, "cooldown": [18, 17, 16, 15, 14], "note": "Re-entering an existing tunnel has a separate 6/5/4/3/2s cooldown." }
+            "Q": {
+              "name": "Prey Seeker",
+              "from": 0,
+              "cooldown": [10, 10, 10, 10, 10]
+            },
+            "W": {
+              "name": "Un-burrow",
+              "from": 1,
+              "cooldown": [1, 1, 1, 1, 1]
+            },
+            "E": {
+              "name": "Tunnel",
+              "from": 2,
+              "cooldown": [18, 17, 16, 15, 14],
+              "note": "Re-entering an existing tunnel has a separate 6/5/4/3/2s cooldown."
+            }
           }
         }
       ]
     },
-
     "Gnar": {
       "verifiedPatch": "16.19",
       "note": "Data Dragon merges Mini and Mega abilities into one entry per slot. The cooldown values are correct for both - the two forms share their cooldowns - but only the Mini names are published.",
@@ -182,21 +309,229 @@
           "name": "Mini Gnar",
           "short": "Mini",
           "abilities": {
-            "Q": { "name": "Boomerang Throw", "from": 0, "cooldown": [16, 14.5, 13, 11.5, 10] },
-            "W": { "name": "Hyper", "from": 1, "cooldown": [0, 0, 0, 0, 0], "note": "Mini Gnar's W is a passive on-hit stack effect - it has no cooldown of its own." },
-            "E": { "name": "Hop", "from": 2, "cooldown": [22, 19.5, 17, 14.5, 12] }
+            "Q": {
+              "name": "Boomerang Throw",
+              "from": 0,
+              "cooldown": [16, 14.5, 13, 11.5, 10]
+            },
+            "W": {
+              "name": "Hyper",
+              "from": 1,
+              "cooldown": [0, 0, 0, 0, 0],
+              "note": "Mini Gnar's W is a passive on-hit stack effect - it has no cooldown of its own."
+            },
+            "E": {
+              "name": "Hop",
+              "from": 2,
+              "cooldown": [22, 19.5, 17, 14.5, 12]
+            }
           }
         },
         {
           "name": "Mega Gnar",
           "short": "Mega",
           "abilities": {
-            "Q": { "name": "Boulder Toss", "from": 0, "cooldown": [16, 14.5, 13, 11.5, 10] },
-            "W": { "name": "Wallop", "from": 1, "cooldown": [7, 7, 7, 7, 7] },
-            "E": { "name": "Crunch", "from": 2, "cooldown": [22, 19.5, 17, 14.5, 12] }
+            "Q": {
+              "name": "Boulder Toss",
+              "from": 0,
+              "cooldown": [16, 14.5, 13, 11.5, 10]
+            },
+            "W": {
+              "name": "Wallop",
+              "from": 1,
+              "cooldown": [7, 7, 7, 7, 7]
+            },
+            "E": {
+              "name": "Crunch",
+              "from": 2,
+              "cooldown": [22, 19.5, 17, 14.5, 12]
+            }
           }
         }
       ]
+    },
+    "Darius": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "W": {
+          "mechanics": [
+            "A kill with the empowered attack refunds half the cooldown."
+          ]
+        },
+        "R": {
+          "mechanics": [
+            "Resets on a kill: recast free within 20s (rank 3: no time limit)."
+          ]
+        }
+      }
+    },
+    "Fiora": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "Hitting a target cuts the cooldown by 50% - shown value is a miss (the maximum)."
+          ]
+        }
+      }
+    },
+    "Irelia": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "Resets if the target dies or is marked (Unsteady) - shown value is the no-reset case."
+          ]
+        }
+      }
+    },
+    "Riven": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "Three casts; the cooldown starts after the 3rd cast, or 4s after the last cast if you stop early."
+          ]
+        }
+      }
+    },
+    "Aatrox": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "name": "Deathbringer Stance",
+          "levelRange": [22, 10],
+          "static": true,
+          "mechanics": [
+            "Static, 22s at level 1 down to 10s at 18. Hitting a champion or large monster cuts the current cooldown by 2s (4s with a Q sweetspot)."
+          ]
+        },
+        "Q": {
+          "mechanics": [
+            "Three casts; the cooldown starts after the 3rd cast, or 4s after the last cast if you stop early."
+          ]
+        }
+      }
+    },
+    "Illaoi": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "name": "Prophet of an Elder God",
+          "levelRange": [18, 7],
+          "static": true,
+          "mechanics": [
+            "Tentacle spawn timer. Static, 18s at level 1 down to 7s at 18."
+          ]
+        }
+      }
+    },
+    "Gangplank": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "name": "Trial by Fire",
+          "cooldown": [15],
+          "scaling": "flat",
+          "static": true,
+          "mechanics": [
+            "A Powder Keg exploding resets it."
+          ]
+        }
+      }
+    },
+    "Yasuo": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "static": true,
+          "mechanics": [
+            "Static: ability haste does not affect it. 4s down to 1.33s with bonus attack speed - shown value is at 0 bonus AS (the maximum)."
+          ]
+        }
+      }
+    },
+    "Yone": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "static": true,
+          "mechanics": [
+            "Static: ability haste does not affect it. 4s down to 1.33s with bonus attack speed - shown value is at 0 bonus AS (the maximum)."
+          ]
+        },
+        "W": {
+          "static": true,
+          "mechanics": [
+            "Static: ability haste does not affect it. 14s down to 6s with bonus attack speed - shown value is at 0 bonus AS (the maximum)."
+          ]
+        }
+      }
+    },
+    "Tryndamere": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "mechanics": [
+            "Critical strikes cut the current cooldown by 0.75s (1.5s vs champions) - shown value is the maximum."
+          ]
+        }
+      }
+    },
+    "MasterYi": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "Each basic attack cuts the current cooldown by 1s - shown value is the maximum."
+          ]
+        },
+        "R": {
+          "mechanics": [
+            "Passive: a champion takedown cuts the current cooldowns of Q, W and E by 70%."
+          ]
+        }
+      }
+    },
+    "Olaf": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "mechanics": [
+            "Basic attacks cut the cooldown by 1s (2s vs monsters) - shown value is the maximum."
+          ]
+        }
+      }
+    },
+    "Katarina": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "mechanics": [
+            "A takedown within 3s of damaging a champion cuts all current ability cooldowns by 15s."
+          ]
+        }
+      }
+    },
+    "Renekton": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "mechanics": [
+            "Recast (Dice) within 4s if you hit; the cooldown starts on the first cast."
+          ]
+        }
+      }
+    },
+    "Jax": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "mechanics": [
+            "The cooldown starts as soon as Counter Strike is activated, not when it ends."
+          ]
+        }
+      }
     }
   }
 }

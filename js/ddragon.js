@@ -77,11 +77,20 @@ async function idbDelete(key) {
   });
 }
 
-/** Drop every cached entry that is not for `keepPatch`. */
+/**
+ * Bump when the trimmed shape changes, so cached data from an older app
+ * version is refetched instead of read with fields missing.
+ * v2: champion attack range, item.json.
+ */
+const DATA_VERSION = 2;
+const keyFor = (patch, name) => `${patch}:v${DATA_VERSION}:${name}`;
+
+/** Drop every cached entry that is not this patch in this data version. */
 async function evictOtherPatches(keepPatch) {
+  const keep = `${keepPatch}:v${DATA_VERSION}:`;
   const keys = await idbKeys();
   await Promise.all(
-    keys.filter((k) => typeof k === 'string' && k.includes(':') && !k.startsWith(`${keepPatch}:`))
+    keys.filter((k) => typeof k === 'string' && k.includes(':') && !k.startsWith(keep))
       .map(idbDelete)
   );
 }
@@ -100,6 +109,7 @@ function trimChampion(c) {
     title: c.title,
     tags: c.tags,
     partype: c.partype,
+    range: c.stats?.attackrange ?? 125,
     image: { full: c.image.full },
     passive: {
       name: c.passive.name,
@@ -134,6 +144,28 @@ function trimSummoner(s) {
     modes: s.modes,
     image: { full: s.image.full },
   };
+}
+
+/**
+ * Only Summoner's Rift items that are in the shop; the description is kept
+ * because haste lives in its text (see js/items.js). ~200 of ~700 entries.
+ */
+function trimItems(data) {
+  const out = {};
+  for (const [id, it] of Object.entries(data)) {
+    if (Number(id) >= 10000 || !it.maps?.['11'] || !it.gold?.purchasable || it.inStore === false) continue;
+    out[id] = {
+      name: it.name,
+      description: it.description,
+      gold: { total: it.gold.total, purchasable: true },
+      maps: { 11: true },
+      depth: it.depth || 1,
+      tags: it.tags || [],
+      requiredChampion: it.requiredChampion || '',
+      image: { full: it.image?.full },
+    };
+  }
+  return out;
 }
 
 /* ---------------------------------------------------------------------- fetch */
@@ -177,13 +209,18 @@ export async function loadDataDragon(onProgress = () => {}) {
     );
   }
 
-  const cachedChampions = await idbGet(`${patch}:champions`);
-  const cachedSummoners = await idbGet(`${patch}:summoners`);
+  const [cachedChampions, cachedSummoners, cachedItems] = await Promise.all([
+    idbGet(keyFor(patch, 'champions')),
+    idbGet(keyFor(patch, 'summoners')),
+    idbGet(keyFor(patch, 'items')),
+  ]);
 
-  if (cachedChampions && cachedSummoners) {
+  if (cachedChampions && cachedSummoners && cachedItems) {
     onProgress(`Patch ${patch} — loaded from cache`);
     if (online && patch !== cachedPatch) await idbSet('latestPatch', patch);
-    return { patch, champions: cachedChampions, summoners: cachedSummoners, stale: !online };
+    return {
+      patch, champions: cachedChampions, summoners: cachedSummoners, items: cachedItems, stale: !online,
+    };
   }
 
   if (!online) {
@@ -194,9 +231,10 @@ export async function loadDataDragon(onProgress = () => {}) {
 
   onProgress(`Downloading patch ${patch} champion data…`);
   const base = `${CDN}/cdn/${patch}/data/en_US`;
-  const [full, summoner] = await Promise.all([
+  const [full, summoner, item] = await Promise.all([
     getJson(`${base}/championFull.json`),
     getJson(`${base}/summoner.json`),
+    getJson(`${base}/item.json`),
   ]);
 
   onProgress('Preparing data…');
@@ -206,14 +244,17 @@ export async function loadDataDragon(onProgress = () => {}) {
   const summoners = {};
   for (const [id, s] of Object.entries(summoner.data)) summoners[id] = trimSummoner(s);
 
+  const items = trimItems(item.data);
+
   await Promise.all([
-    idbSet(`${patch}:champions`, champions),
-    idbSet(`${patch}:summoners`, summoners),
+    idbSet(keyFor(patch, 'champions'), champions),
+    idbSet(keyFor(patch, 'summoners'), summoners),
+    idbSet(keyFor(patch, 'items'), items),
     idbSet('latestPatch', patch),
   ]);
   await evictOtherPatches(patch);
 
-  return { patch, champions, summoners, stale: false };
+  return { patch, champions, summoners, items, stale: false };
 }
 
 /* ----------------------------------------------------------------------- URLs */
@@ -222,5 +263,6 @@ export const img = {
   champion: (patch, file) => `${CDN}/cdn/${patch}/img/champion/${file}`,
   spell: (patch, file) => `${CDN}/cdn/${patch}/img/spell/${file}`,
   passive: (patch, file) => `${CDN}/cdn/${patch}/img/passive/${file}`,
+  item: (patch, file) => `${CDN}/cdn/${patch}/img/item/${file}`,
   splash: (id) => `${CDN}/cdn/img/champion/loading/${id}_0.jpg`,
 };

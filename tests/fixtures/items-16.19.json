@@ -1,0 +1,353 @@
+{
+ "version": "16.19.1",
+ "data": {
+  "1001": {
+   "name": "Boots",
+   "description": "<mainText><stats><attention>25</attention> Move Speed</stats><br><br></mainText>",
+   "gold": {
+    "total": 300,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 1,
+   "tags": [
+    "Boots"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "1001.png"
+   }
+  },
+  "2512": {
+   "name": "Fiendhunter Bolts",
+   "description": "<mainText><stats><attention>45%</attention> Attack Speed<br><attention>25%</attention> Critical Strike Chance<br><attention>4%</attention> Move Speed</stats><br><br><passive>Night Vigil</passive><br>Gain 30 Ultimate Ability Haste.<br><br><passive>Opening Barrage</passive><br>After casting your Ultimate, your next 3 basic attacks gain <attackSpeed>50% Attack Speed</attackSpeed> and Critically Strike for 80% of your normal Critical Strike damage for 8 seconds. If an attack would already Critically Strike, instead it deals <trueDamage>15% bonus true damage</trueDamage>.</mainText>",
+   "gold": {
+    "total": 2650,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "CriticalStrike",
+    "AttackSpeed",
+    "NonbootsMovement",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "2512.png"
+   }
+  },
+  "2517": {
+   "name": "Endless Hunger",
+   "description": "<mainText><stats><attention>65</attention> Attack Damage<br><attention>5%</attention> Omnivamp<br><attention>20%</attention> Tenacity</stats><br><br><passive>Famine</passive><br>Gain Ability Haste based on your Bonus AD.<br><br><passive>Feast</passive><br>When a champion that you damaged recently dies, gain Omnivamp for a moderate duration. </mainText>",
+   "gold": {
+    "total": 3100,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "Damage",
+    "LifeSteal",
+    "SpellVamp",
+    "Tenacity",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "2517.png"
+   }
+  },
+  "2522": {
+   "name": "Actualizer",
+   "description": "<mainText><stats><attention>90</attention> Ability Power<br><attention>300</attention> Mana<br><attention>10</attention> Ability Haste</stats><br><br><active>Mana Made Real</active> (0s)<br>For 8 seconds, your mana is Empowered. While Empowered, your spells cost 100% more Mana, you gain  increased Ability damage, Shielding, and Healing, and your basic ability cooldowns progress 30% faster.</mainText>",
+   "gold": {
+    "total": 2800,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "SpellDamage",
+    "Mana",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "2522.png"
+   }
+  },
+  "3071": {
+   "name": "Black Cleaver",
+   "description": "<mainText><stats><attention>45</attention> Attack Damage<br><attention>400</attention> Health<br><attention>20</attention> Ability Haste</stats><br><br><passive>Carve</passive><br>Dealing <physicalDamage>physical damage</physicalDamage> to champions reduces the target's <scaleArmor>Armor by 6%</scaleArmor> for 6 seconds. (stacks 5 times).<br><br><passive>Fervor</passive><br>Dealing <physicalDamage>physical damage</physicalDamage> grants <speed> Move Speed</speed> for 2 seconds.</mainText>",
+   "gold": {
+    "total": 3000,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "Health",
+    "Damage",
+    "CooldownReduction",
+    "OnHit",
+    "NonbootsMovement",
+    "ArmorPenetration",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3071.png"
+   }
+  },
+  "3073": {
+   "name": "Experimental Hexplate",
+   "description": "<mainText><stats><attention>40</attention> Attack Damage<br><attention>20%</attention> Attack Speed<br><attention>450</attention> Health</stats><br><br><passive>Hexcharged</passive><br>Gain 30 Ultimate Ability Haste.<br><br><passive>Overdrive</passive><br>After casting your Ultimate, gain <attackSpeed>% Attack Speed</attackSpeed> and <speed>% Move Speed</speed> for 8 seconds. </mainText>",
+   "gold": {
+    "total": 3000,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "Health",
+    "Damage",
+    "AttackSpeed",
+    "CooldownReduction",
+    "NonbootsMovement",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3073.png"
+   }
+  },
+  "3078": {
+   "name": "Trinity Force",
+   "description": "<mainText><stats><attention>36</attention> Attack Damage<br><attention>30%</attention> Attack Speed<br><attention>333</attention> Health<br><attention>15</attention> Ability Haste</stats><br><br><passive>Spellblade</passive><br>After using an Ability, your next Attack deals <physicalDamage>bonus physical damage</physicalDamage> <OnHit>On-Hit</OnHit>.<br> <br><passive>Quicken</passive><br>Attacking grants <speed>20 Move Speed</speed> for 2 seconds.</mainText>",
+   "gold": {
+    "total": 3333,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "Health",
+    "Damage",
+    "AttackSpeed",
+    "CooldownReduction",
+    "OnHit",
+    "NonbootsMovement",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3078.png"
+   }
+  },
+  "3108": {
+   "name": "Fiendish Codex",
+   "description": "<mainText><stats><attention>25</attention> Ability Power<br><attention>10</attention> Ability Haste</stats><br><br></mainText>",
+   "gold": {
+    "total": 850,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 2,
+   "tags": [
+    "SpellDamage",
+    "CooldownReduction",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3108.png"
+   }
+  },
+  "3118": {
+   "name": "Malignance",
+   "description": "<mainText><stats><attention>90</attention> Ability Power<br><attention>600</attention> Mana<br><attention>15</attention> Ability Haste</stats><br><br><passive>Scorn</passive><br>Gain 20 Ultimate Ability Haste.<br><br><passive>Hatefog</passive><br>Damaging a champion with your Ultimate burns the ground beneath them for 3s, dealing <magicDamage>magic damage</magicDamage> per second and reducing their <scaleMR>Magic Resist</scaleMR>. <br></mainText>",
+   "gold": {
+    "total": 2700,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "SpellDamage",
+    "Mana",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3118.png"
+   }
+  },
+  "3158": {
+   "name": "Ionian Boots of Lucidity",
+   "description": "<mainText><stats><attention>10</attention> Ability Haste<br><attention>45</attention> Move Speed</stats><br><br><passive>Ionian Insight</passive><br>Gain 10 Summoner Spell Haste.<br><br></mainText>",
+   "gold": {
+    "total": 900,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 2,
+   "tags": [
+    "Boots",
+    "CooldownReduction"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3158.png"
+   }
+  },
+  "3161": {
+   "name": "Spear of Shojin",
+   "description": "<mainText><stats><attention>45</attention> Attack Damage<br><attention>450</attention> Health</stats><br><br><passive>Dragonforce</passive> <br>Gain 25 Basic Ability Haste.<br><br><passive>Focused Will</passive> <br>Dealing damage with Abilities increases your Champion's Ability and Passive damage by 3% for 6 seconds. (stacks 4 times).</mainText>",
+   "gold": {
+    "total": 3100,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "Health",
+    "Damage",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3161.png"
+   }
+  },
+  "3171": {
+   "name": "Crimson Lucidity",
+   "description": "<mainText><stats><attention>20</attention> Ability Haste<br><attention>45</attention> Move Speed</stats><br><br><passive>Ionian Insight</passive><br>Gain 20 Summoner Spell Haste.<br><br><passive>Noxian Haste</passive><br>Empowering or protecting allies with abilities, dealing damage to enemy Champions with abilities, or casting a Summoner Spell grants <speed> Move Speed</speed> for 4 seconds.<br><br><rules>Noxian Haste can only be triggered once per Ability cast.</rules></mainText>",
+   "gold": {
+    "total": 900,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "CooldownReduction",
+    "Boots"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "3171.png"
+   }
+  },
+  "4005": {
+   "name": "Imperial Mandate",
+   "description": "<mainText><stats><attention>60</attention> Ability Power<br><attention>15</attention> Ability Haste<br><attention>150%</attention> Base Mana Regen</stats><br><br><passive>Control</passive><br>Gain 20 Ability Haste for your abilities with <keyword>Immobilizing</keyword> effects.<br><br><passive>Command</passive><br>On <keyword>Immobilizing</keyword> an enemy champion, mark them as 7% <Keyword>Vulnerable</Keyword> for 4 seconds.<br></mainText>",
+   "gold": {
+    "total": 2400,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "SpellDamage",
+    "ManaRegen",
+    "CooldownReduction",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "4005.png"
+   }
+  },
+  "6616": {
+   "name": "Staff of Flowing Water",
+   "description": "<mainText><stats><attention>35</attention> Ability Power<br><attention>10%</attention> Heal and Shield Power<br><attention>125%</attention> Base Mana Regen<br><attention>10</attention> Ability Haste</stats><br><br><passive>Rapids</passive><br>Healing or Shielding an ally grants you both <magicDamage>40 Ability Power</magicDamage> and <attention>15 Ability Haste</attention> for 6 seconds.</mainText>",
+   "gold": {
+    "total": 2250,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "SpellDamage",
+    "ManaRegen",
+    "CooldownReduction",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "6616.png"
+   }
+  },
+  "6675": {
+   "name": "Navori Flickerblade",
+   "description": "<mainText><stats><attention>40%</attention> Attack Speed<br><attention>25%</attention> Critical Strike Chance<br><attention>4%</attention> Move Speed</stats><br><br><passive>Transcendence</passive><br>Attacks reduce Basic Ability cooldowns by <attention>15%</attention> of their remaining cooldown.</mainText>",
+   "gold": {
+    "total": 2650,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "CriticalStrike",
+    "AttackSpeed",
+    "NonbootsMovement"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "6675.png"
+   }
+  },
+  "6696": {
+   "name": "Axiom Arc",
+   "description": "<mainText><stats><attention>55</attention> Attack Damage<br><attention>18</attention> Lethality<br><attention>20</attention> Ability Haste</stats><br><br><passive>Flux</passive><br>When a champion that you damaged within 3 seconds dies, refund some of your Ultimate Ability's total cooldown.</mainText>",
+   "gold": {
+    "total": 2750,
+    "purchasable": true
+   },
+   "maps": {
+    "11": true
+   },
+   "depth": 3,
+   "tags": [
+    "Damage",
+    "ArmorPenetration",
+    "AbilityHaste"
+   ],
+   "requiredChampion": "",
+   "image": {
+    "full": "6696.png"
+   }
+  }
+ }
+}

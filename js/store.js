@@ -12,6 +12,12 @@ const DEFAULTS = {
   ionianBoots: false,
   lastChampion: 'Renekton',
   sort: { rank: 'max', keys: ['Q', 'W', 'E', 'R'], role: 'all' },
+  // Matchup tab (Phase 2). All per-user, all in this browser only.
+  matchup: null,        // last matchup state; null = start from defaults
+  pinned: null,         // pinned quick picks; null = data/matchup.json default
+  favorites: [],        // [{ label, query }]
+  skillOrders: {},      // { champId: 'QEW' } user overrides
+  keyOverrides: {},     // { champId: { Q: true, E: false } } starred abilities
 };
 
 function read() {

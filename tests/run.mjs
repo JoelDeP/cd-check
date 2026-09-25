@@ -1,0 +1,279 @@
+/**
+ * Unit tests for the pure modules - no dependencies, no browser.
+ *   node tests/run.mjs
+ * Exits 1 on any failure. Item parsing is tested against real Data Dragon
+ * 16.19 text saved in tests/fixtures.
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import {
+  applyHaste, computeHaste, abilityCooldown, hasteForSlot, grantAmount,
+  rescaleRemaining, cooldownIndex, hasteNeeded, summonerCooldown,
+} from '../js/haste.js';
+import { parseItemHaste, buildItems } from '../js/items.js';
+import { ranksAtLevel, resolveOrder, skillSequence } from '../js/skill-order.js';
+import { encodeMatchup, decodeMatchup, defaultMatchup } from '../js/matchup-state.js';
+import { fmt } from '../js/model.js';
+import { staleness } from '../js/patch.js';
+
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
+const sources = read('data/haste-sources.json');
+const fixture = read('tests/fixtures/items-16.19.json');
+
+let pass = 0;
+let fail = 0;
+function test(name, fn) {
+  try {
+    fn();
+    pass += 1;
+  } catch (err) {
+    fail += 1;
+    console.error(`FAIL  ${name}\n      ${err.message}`);
+  }
+}
+function eq(actual, expected, msg = '') {
+  const a = JSON.stringify(actual);
+  const e = JSON.stringify(expected);
+  if (a !== e) throw new Error(`${msg} expected ${e}, got ${a}`);
+}
+function near(actual, expected, msg = '', eps = 1e-6) {
+  if (Math.abs(actual - expected) > eps) throw new Error(`${msg} expected ${expected}, got ${actual}`);
+}
+const grantsOf = (id) => Object.fromEntries(parseItemHaste(fixture.data[id].description).map((g) => [g.kind, g.amount]));
+
+/* ------------------------------------------------------------ formula */
+
+test('haste formula', () => {
+  near(applyHaste(120, 20), 100);
+  near(applyHaste(8, 60), 5);
+  near(applyHaste(10, 0), 10);
+  near(applyHaste(10, -5), 10, 'negative haste clamps to 0');
+  eq(hasteNeeded(16, 10), 60);
+});
+
+test('fmt rounding', () => {
+  eq(fmt(0.25), '0.25');
+  eq(fmt(13.333), '13.3');
+  eq(fmt(7), '7');
+  eq(fmt(NaN), '–');
+});
+
+/* ------------------------------------------------------ item parsing */
+
+test('Malignance: 15 AH + 20 ultimate haste (passive)', () => eq(grantsOf('3118'), { ability: 15, ultimate: 20 }));
+test('Spear of Shojin: 25 basic ability haste', () => eq(grantsOf('3161').basic, 25));
+test('Ionian Boots: 10 AH + 10 summoner haste', () => eq(grantsOf('3158'), { ability: 10, summoner: 10 }));
+test('Crimson Lucidity: 20 AH + 20 summoner haste', () => eq(grantsOf('3171'), { ability: 20, summoner: 20 }));
+test('Imperial Mandate: conditional +20 is NOT counted', () => eq(grantsOf('4005'), { ability: 15 }));
+test('Staff of Flowing Water: temporary ally +15 is NOT counted', () => eq(grantsOf('6616'), { ability: 10 }));
+test('Experimental Hexplate: 30 ultimate haste', () => eq(grantsOf('3073').ultimate, 30));
+test('Fiendhunter Bolts: 30 ultimate haste', () => eq(grantsOf('2512').ultimate, 30));
+test('Endless Hunger: no flat haste parsed (formula item)', () => eq(grantsOf('2517'), {}));
+test('Black Cleaver: 20 AH', () => eq(grantsOf('3071'), { ability: 20 }));
+test('Boots: no haste', () => eq(grantsOf('1001'), {}));
+
+test('buildItems keeps haste items + exceptions, drops the rest', () => {
+  const items = buildItems('16.19.1', fixture.data, sources);
+  eq(Boolean(items['3118']), true, 'Malignance');
+  eq(Boolean(items['2517']), true, 'Endless Hunger (exception)');
+  eq(Boolean(items['1001']), false, 'plain Boots');
+  eq(items['3158'].group, 'Boots');
+  eq(items['3118'].group, 'Legendary');
+});
+
+/* ------------------------------------------------------- calculator */
+
+const itemsCtx = { sources, items: buildItems('16.19.1', fixture.data, sources) };
+const total = (loadout) => computeHaste(loadout, itemsCtx).totals;
+
+test('items stack additively by kind', () => {
+  eq(total({ items: ['3118', '3158'] }), { ability: 25, basic: 0, ultimate: 20, summoner: 10, item: 0 });
+});
+
+test('Hextech stacks: 5 each, max 4', () => {
+  eq(total({ buffs: { hextech: 2 } }).ability, 10);
+  eq(total({ buffs: { hextech: 9 } }).ability, 20);
+});
+
+test('Blue buff: 10 / 15 / 20 at levels 1 / 6 / 11', () => {
+  eq(total({ level: 5, buffs: { blue: true } }).ability, 10);
+  eq(total({ level: 6, buffs: { blue: true } }).ability, 15);
+  eq(total({ level: 10, buffs: { blue: true } }).ability, 15);
+  eq(total({ level: 11, buffs: { blue: true } }).ability, 20);
+});
+
+test('Transcendence: +5 at 5, +5 at 8, note before', () => {
+  eq(total({ level: 4, runes: { transcendence: true } }).ability, 0);
+  eq(total({ level: 5, runes: { transcendence: true } }).ability, 5);
+  eq(total({ level: 8, runes: { transcendence: true } }).ability, 10);
+  const r = computeHaste({ level: 4, runes: { transcendence: true } }, itemsCtx);
+  eq(r.notes.length >= 1, true, 'pending-level notes');
+});
+
+test('Ultimate Hunter: 6 + 5/stack, capped at 31', () => {
+  eq(total({ runes: { ultimateHunter: 0 } }).ultimate, 6);
+  eq(total({ runes: { ultimateHunter: 3 } }).ultimate, 21);
+  eq(total({ runes: { ultimateHunter: 9 } }).ultimate, 31);
+});
+
+test('Legend: Haste is basic-only, 1.5/stack max 10', () => {
+  const t = total({ runes: { legendHaste: 10 } });
+  eq(t.basic, 15);
+  eq(t.ability, 0);
+});
+
+test('Cosmic Insight: 18 summoner + 10 item haste', () => {
+  const t = total({ runes: { cosmic: true } });
+  eq([t.summoner, t.item], [18, 10]);
+});
+
+test('Stat shard: 8 AH', () => eq(total({ runes: { shardAH: true } }).ability, 8));
+
+test('Endless Hunger formula: melee 5 + 13% bonus AD, ranged 10%', () => {
+  near(total({ items: ['2517'], bonusAD: 40 }).ability, 10.2);
+  near(total({ items: ['2517'], bonusAD: 40, ranged: true }).ability, 9);
+});
+
+test('manual extras by kind', () => {
+  eq(total({ extra: [{ kind: 'ability', amount: 30 }, { kind: 'ultimate', amount: 20 }] }).ultimate, 20);
+});
+
+test('grantAmount byLevel / perStack / fromLevel', () => {
+  eq(grantAmount({ byLevel: { levels: [1, 6, 11], values: [10, 15, 20] } }, 0, 7), 15);
+  eq(grantAmount({ perStack: 1.5, maxStacks: 10 }, 12, 1), 15);
+  eq(grantAmount({ amount: 5, fromLevel: 8 }, 0, 7), 0);
+});
+
+/* --------------------------------------------------- slot application */
+
+const T = { ability: 20, basic: 25, ultimate: 30, summoner: 18, item: 10 };
+test('slot haste: Q = ability + basic, R = ability + ult, P = ability', () => {
+  eq(hasteForSlot('Q', T), 45);
+  eq(hasteForSlot('R', T), 50);
+  eq(hasteForSlot('P', T), 20);
+});
+
+test('static cooldowns ignore haste', () => {
+  const yasuoQ = { slot: 'Q', cooldown: [4, 4, 4, 4, 4], static: true };
+  eq(abilityCooldown(yasuoQ, 0, T).final, 4);
+  const q = { slot: 'Q', cooldown: [9, 8, 7, 6, 5], static: false };
+  near(abilityCooldown(q, 0, T).final, 9 * 100 / 145);
+});
+
+test('summoner cooldown uses summoner haste only', () => near(summonerCooldown(300, T).final, 300 * 100 / 118));
+
+test('cooldownIndex: rank-based, level-based, not learned', () => {
+  eq(cooldownIndex({ slot: 'Q', scaling: 'rank' }, 9, 3), 2);
+  eq(cooldownIndex({ slot: 'Q', scaling: 'rank' }, 1, 0), -1);
+  eq(cooldownIndex({ slot: 'P', scaling: 'level', cooldown: [14, 11, 8], levelBreaks: [1, 7, 13] }, 8, 0), 1);
+});
+
+test('rescaleRemaining: 10s left, 0 -> 50 AH = 6.67s', () => near(rescaleRemaining(10, 0, 50), 10 * 100 / 150));
+
+/* ------------------------------------------------------- skill order */
+
+const champ = (maxranks) => ({
+  forms: [{ abilities: Object.fromEntries(Object.entries(maxranks).map(([s, m]) => [s, { maxrank: m }])) }],
+});
+const NORMAL = champ({ Q: 5, W: 5, E: 5, R: 3 });
+
+test('standard QEW order at key levels', () => {
+  const o = resolveOrder('X', {}, { X: { max: 'QEW' } });
+  eq(ranksAtLevel(NORMAL, o, 1), { Q: 1, W: 0, E: 0, R: 0 });
+  eq(ranksAtLevel(NORMAL, o, 3), { Q: 1, W: 1, E: 1, R: 0 });
+  eq(ranksAtLevel(NORMAL, o, 6), { Q: 3, W: 1, E: 1, R: 1 });
+  eq(ranksAtLevel(NORMAL, o, 9), { Q: 5, W: 1, E: 2, R: 1 });
+  eq(ranksAtLevel(NORMAL, o, 13), { Q: 5, W: 1, E: 5, R: 2 });
+  eq(ranksAtLevel(NORMAL, o, 18), { Q: 5, W: 5, E: 5, R: 3 });
+});
+
+test('skill sequence reads naturally', () => {
+  const o = { max: 'QEW', start: 'QEW' };
+  // Q E W, then Q to rank 5 as soon as the rank rule allows, R at 6/11/16.
+  eq(skillSequence(NORMAL, o).join(''), 'QEWQQRQEQEREEWWRWW');
+});
+
+test('rank rule: rank n needs level 2n-1', () => {
+  const r = ranksAtLevel(NORMAL, { max: 'QEW', start: 'QQQ' }, 3);
+  eq(r.Q <= 2, true, 'Q cannot be rank 3 at level 3');
+});
+
+test('Jayce: free R at 1, six ranks per basic', () => {
+  const jayce = champ({ Q: 6, W: 6, E: 6, R: 1 });
+  eq(ranksAtLevel(jayce, { max: 'QEW', start: 'QEW' }, 1).R, 1);
+  eq(ranksAtLevel(jayce, { max: 'QEW', start: 'QEW' }, 18), { Q: 6, W: 6, E: 6, R: 1 });
+});
+
+test('Nidalee/Elise: R rank 1 free, then 6/11/16', () => {
+  const nid = champ({ Q: 5, W: 5, E: 5, R: 4 });
+  const o = { max: 'QEW', start: 'QEW' };
+  eq(ranksAtLevel(nid, o, 1).R, 1);
+  eq(ranksAtLevel(nid, o, 16).R, 4);
+  eq(ranksAtLevel(nid, o, 18), { Q: 5, W: 5, E: 5, R: 4 });
+});
+
+test('resolveOrder: user > default > generic', () => {
+  eq(resolveOrder('Jax', { Jax: 'EQW' }, { Jax: { max: 'QWE' } }).source, 'user');
+  eq(resolveOrder('Jax', {}, { Jax: { max: 'QWE', start: 'EQW' } }), { max: 'QWE', start: 'EQW', source: 'default' });
+  eq(resolveOrder('Zzz', {}, {}).max, 'QEW');
+  eq(resolveOrder('Jax', { Jax: 'QQQ' }, {}).source, 'generic', 'invalid override ignored');
+});
+
+/* ------------------------------------------------------------ URL */
+
+test('matchup URL round-trip', () => {
+  const m = defaultMatchup(['Renekton']);
+  m.me.level = 9;
+  m.vs.level = 9;
+  m.me.order = 'QWE';
+  m.me.loadout.items = ['3118', '3158'];
+  m.me.loadout.buffs = { hextech: 2, blue: true };
+  m.me.loadout.runes = { cosmic: true, ultimateHunter: 3 };
+  m.vs.loadout.extra = [{ kind: 'ability', amount: 25, label: 'Manual' }];
+  m.vs.summoners = ['SummonerFlash', 'SummonerDot'];
+  const q = encodeMatchup(m);
+  const back = decodeMatchup(new URLSearchParams(q), (s) => ({ renekton: 'Renekton', darius: 'Darius' })[s]);
+  eq(back.me.champ, 'Renekton');
+  eq(back.vs.champ, 'Darius');
+  eq(back.me.level, 9);
+  eq(back.me.order, 'QWE');
+  eq(back.me.loadout.items, ['3118', '3158']);
+  eq(back.me.loadout.buffs, { hextech: 2, blue: true });
+  eq(back.me.loadout.runes, { cosmic: true, ultimateHunter: 3 });
+  eq(back.vs.loadout.extra[0].amount, 25);
+  eq(back.vs.summoners, ['SummonerFlash', 'SummonerDot']);
+  eq(back.linkLevels, true);
+});
+
+test('example link from the spec decodes', () => {
+  const m = decodeMatchup(new URLSearchParams('me=renekton&vs=darius&lvl=6'), (s) => ({ renekton: 'Renekton', darius: 'Darius' })[s]);
+  eq([m.me.champ, m.vs.champ, m.me.level, m.vs.level], ['Renekton', 'Darius', 6, 6]);
+});
+
+test('hostile URL values are clamped / ignored', () => {
+  const m = decodeMatchup(new URLSearchParams('me=x&vs=y&lvl=99&mh=hx99,i<script>,uh-4,ad99999'), () => null);
+  eq(m.me.level, 18);
+  eq(m.me.loadout.buffs.hextech, 4);
+  eq(m.me.loadout.items, []);
+  eq(m.me.loadout.runes.ultimateHunter, 0);
+  eq(m.me.loadout.bonusAD, 1000);
+});
+
+test('no matchup params -> null', () => eq(decodeMatchup(new URLSearchParams('foo=1'), () => null), null));
+
+/* ------------------------------------------------------------ data */
+
+test('every haste source has a verifiedPatch', () => {
+  const all = [...sources.buffs, ...sources.runes, ...Object.values(sources.itemExceptions)];
+  const missing = all.filter((s) => !s.verifiedPatch).map((s) => s.name);
+  eq(missing, []);
+});
+
+test('staleness applies to haste sources too', () => eq(staleness('16.19', '16.20.1').stale, true));
+
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exitCode = fail ? 1 : 0;

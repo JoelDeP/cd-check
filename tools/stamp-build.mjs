@@ -25,7 +25,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SW = path.join(ROOT, 'sw.js');
-const JSON_FILES = ['data/overrides.json', 'data/nicknames.json', 'manifest.webmanifest'];
+const JSON_FILES = [
+  'data/overrides.json', 'data/nicknames.json', 'data/haste-sources.json', 'data/matchup.json', 'manifest.webmanifest',
+];
 const STAMP_SUBJECT = 'Stamp service worker build';
 const BUILD_RE = /const BUILD = '[^']*';/;
 

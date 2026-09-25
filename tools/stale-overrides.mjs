@@ -1,6 +1,7 @@
 /**
- * Lists every hand-verified value in data/overrides.json that the live patch
- * has moved past, so you know exactly what to re-check after a patch.
+ * Lists every hand-verified value in data/overrides.json and
+ * data/haste-sources.json that the live patch has moved past, so you know
+ * exactly what to re-check after a patch.
  *
  *   node tools/stale-overrides.mjs            # compare against the live patch
  *   node tools/stale-overrides.mjs 16.21      # pretend the live patch is 16.21
@@ -71,6 +72,23 @@ for (const [champ, entry] of Object.entries(overrides.champions || {})) {
   if (!touched) check({ kind: 'champion', champ }, entryPatch);
 }
 
+// Haste sources: runes, buffs and item exceptions the calculator uses.
+const hasteSources = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/haste-sources.json'), 'utf8'));
+const grantText = (grants = []) => grants.map((g) => (g.byLevel
+  ? `${g.byLevel.values.join('/')} ${g.kind} @L${g.byLevel.levels.join('/')}`
+  : g.perStack !== undefined
+    ? `${g.perStack}/stack ${g.kind}${g.maxStacks ? ` (max ${g.maxStacks})` : ''}`
+    : `${g.amount} ${g.kind}${g.fromLevel ? ` @L${g.fromLevel}` : ''}`)).join(' + ');
+for (const b of hasteSources.buffs || []) {
+  check({ kind: 'haste', label: `haste: ${b.name}` }, b.verifiedPatch, { ours: grantText(b.grants) });
+}
+for (const r of hasteSources.runes || []) {
+  check({ kind: 'haste', label: `haste: ${r.name}`, runeId: r.runeId }, r.verifiedPatch, { ours: grantText(r.grants) || 'note only' });
+}
+for (const [id, e] of Object.entries(hasteSources.itemExceptions || {})) {
+  check({ kind: 'haste', label: `haste: ${e.name} (item ${id})`, itemId: id }, e.verifiedPatch, { ours: e.formula ? `${e.formula.base} + %bonusAD` : 'note only' });
+}
+
 /* ------------------------------------------------------ Data Dragon now */
 
 const champsToFetch = [...new Set(stale.filter((s) => s.where.champ).map((s) => s.where.champ))];
@@ -90,10 +108,26 @@ let summonerData = null;
 if (stale.some((s) => s.where.kind === 'summoner')) {
   summonerData = (await getJson(`${CDN}/cdn/${ddragonPatch}/data/en_US/summoner.json`)).data;
 }
+const runeText = {};
+if (stale.some((s) => s.where.runeId)) {
+  for (const tree of await getJson(`${CDN}/cdn/${ddragonPatch}/data/en_US/runesReforged.json`)) {
+    for (const slot of tree.slots) {
+      for (const r of slot.runes) {
+        runeText[r.id] = r.longDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+    }
+  }
+}
 
 function ddragonValue(s) {
   const w = s.where;
   if (w.kind === 'summoner') return summonerData?.[w.id]?.cooldown ?? null;
+  if (w.kind === 'haste') {
+    if (w.runeId && runeText[w.runeId]) return `rune text: ${runeText[w.runeId].slice(0, 70)}…`;
+    if (w.runeId) return 'not in runesReforged (stat shard?) - check wiki';
+    if (w.itemId) return 'check item.json text / wiki';
+    return 'not in Data Dragon - check wiki';
+  }
   const c = ddragon[w.champ];
   if (!c) return null;
   if (w.slot === 'P') return 'n/a (passives unpublished)';
@@ -119,7 +153,9 @@ if (!stale.length) {
     const w = s.where;
     const label = w.kind === 'summoner'
       ? w.id
-      : `${w.champ}${w.slot ? ` ${w.slot}` : ''}${w.form ? ` [${w.form}]` : ''}`;
+      : w.kind === 'haste'
+        ? w.label
+        : `${w.champ}${w.slot ? ` ${w.slot}` : ''}${w.form ? ` [${w.form}]` : ''}`;
     return [label, s.verified, fmt(s.ours), fmt(ddragonValue(s))];
   });
   const head = ['override', 'verified', 'ours', 'Data Dragon now'];

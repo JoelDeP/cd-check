@@ -94,6 +94,10 @@ function makeAbility(fields) {
     note: '',
     source: 'ddragon',
     verified: null,
+    // Static cooldowns ignore ability haste entirely (Yasuo Q, most passives).
+    static: false,
+    // Short notes on refunds / resets / reductions, from overrides.json.
+    mechanics: [],
     flags: [],
     ...fields,
   };
@@ -161,20 +165,30 @@ function staleFlag(v) {
  * verifiedPatch wins over its champion entry's.
  */
 function applyAbilityOverride(base, o, vctx) {
-  const a = { ...base, flags: base.flags.slice() };
+  const a = { ...base, flags: base.flags.slice(), mechanics: base.mechanics.slice() };
   if (o.name) a.name = o.name;
   if (o.cooldown) {
     a.cooldown = o.cooldown.slice();
     a.source = 'override';
     a.scaling = o.scaling || 'rank';
   }
+  // "22 - 10 (based on level)" on the wiki: linear from level 1 to level 18.
+  if (o.levelRange) {
+    const [from, to] = o.levelRange;
+    a.cooldown = Array.from({ length: 18 }, (_, i) => from + ((to - from) * i) / 17);
+    a.levelBreaks = Array.from({ length: 18 }, (_, i) => i + 1);
+    a.scaling = 'level';
+    a.source = 'override';
+  }
   if (o.maxrank) a.maxrank = o.maxrank;
   if (o.scaling) a.scaling = o.scaling;
   if (o.levelBreaks) a.levelBreaks = o.levelBreaks.slice();
   if (o.ammo) a.ammo = o.ammo;
   if (o.note) a.note = o.note;
+  if (o.static !== undefined) a.static = Boolean(o.static);
+  if (o.mechanics) a.mechanics = [...new Set([...a.mechanics, ...o.mechanics])];
 
-  if (o.cooldown || o.ammo) {
+  if (o.cooldown || o.levelRange || o.ammo) {
     a.flags = a.flags.filter((f) => f.code !== 'passive' && f.code !== 'none' && f.code !== 'form');
     if (!a.flags.some((f) => f.code === 'override')) a.flags.unshift(FLAG.override);
   } else if (o.unreliable && !a.flags.some((f) => f.code === 'override')) {
@@ -231,6 +245,8 @@ export function buildChampion(patch, champ, overrides) {
     name: champ.name,
     title: champ.title,
     tags: champ.tags || [],
+    // Base attack range; >300 is ranged (Endless Hunger's formula differs).
+    ranged: (champ.range ?? 125) > 300,
     icon: img.champion(patch, champ.image.full),
     forms,
     note: o.note || '',
