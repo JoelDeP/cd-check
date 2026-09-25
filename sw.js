@@ -9,7 +9,7 @@
  * Everything is relative so the app works under a /repo-name/ subpath.
  */
 
-const BUILD = 'f35a34772e79';
+const BUILD = 'bac041fc1a53';
 const SHELL_CACHE = `cd-check-shell-${BUILD}`;
 const IMG_CACHE = 'cd-check-ddragon-img';
 
