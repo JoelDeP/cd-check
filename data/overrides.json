@@ -263,7 +263,8 @@
             "W": {
               "name": "Un-burrow",
               "from": 1,
-              "cooldown": [1, 1, 1, 1, 1]
+              "cooldown": [1, 1, 1, 1, 1],
+              "static": true
             },
             "E": {
               "name": "Tunnel",
@@ -506,6 +507,482 @@
           ]
         }
       }
+    },
+    "TahmKench": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "R": {
+          "cooldown": [120, 100, 80],
+          "note": "Data Dragon publishes 0. LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Kalista": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "cooldown": [10, 9.5, 9, 8.5, 8],
+          "note": "Data Dragon publishes 0. LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Rakan": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "cooldown": [20, 18, 16, 14, 12],
+          "note": "Data Dragon publishes 0. LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Talon": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "cooldown": [2, 2, 2, 2, 2],
+          "note": "Data Dragon publishes 0. LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Can't be used on the same area of terrain again for a while (per-wall lockout)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Veigar": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "W": {
+          "cooldown": [8, 8, 8, 8, 8],
+          "note": "Data Dragon publishes 0. LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Phenomenal Evil stacks shorten it (8 x 0.9^N on the wiki) - shown value is the maximum, with no stacks."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Singed": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "cooldown": [1, 1, 1, 1, 1],
+          "static": true,
+          "mechanics": [
+            "Toggle: 1s between toggles (static)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Amumu": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "W": {
+          "static": true,
+          "mechanics": [
+            "Toggle: 1s between toggles (static)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Aphelios": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "W": {
+          "static": true,
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Jinx": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "static": true,
+          "mechanics": [
+            "Weapon swap: 0.9s between swaps (static)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Karthus": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "E": {
+          "static": true,
+          "mechanics": [
+            "Toggle: 0.5s between toggles (static)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Samira": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "R": {
+          "static": true,
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Yuumi": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "W": {
+          "cooldown": [10, 5, 0],
+          "scaling": "level",
+          "levelBreaks": [1, 6, 11],
+          "static": true,
+          "mechanics": [
+            "Starts after the attach channel completes; no cooldown from level 11."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "KSante": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "static": true,
+          "mechanics": [
+            "Static. 3.5s down to 2s with bonus resistances (-0.0125s per bonus armor/MR, capped at 120) - shown value is the maximum."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Hecarim": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "Each Rampage stack cuts the cooldown by 0.75s (max 3 stacks: 4s down to 1.75s) - shown value is the maximum."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Zeri": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "Static: 1 / attack speed. It behaves like her basic attack, so it has no fixed cooldown."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Syndra": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "Q": {
+          "mechanics": [
+            "With her Transcendent passive bonus, Dark Sphere stores 2 charges: 7s recharge, 1.25s between casts."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Alistar": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [3],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Can trigger only once every 3s; stacks still build meanwhile."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Anivia": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [240],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Azir": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [90],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Starts after the Sun Disc is destroyed."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Blitzcrank": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [90],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Starts as soon as the shield triggers."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Galio": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [5],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Hitting a champion or epic monster with an ability cuts the current cooldown by 3s."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Gragas": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [12, 10, 8, 6],
+          "scaling": "level",
+          "levelBreaks": [1, 6, 11, 16],
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Leblanc": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [60],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Malphite": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [8, 7, 6],
+          "scaling": "level",
+          "levelBreaks": [1, 7, 13],
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Recharges after this long without taking damage."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Malzahar": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [30, 24, 18, 12],
+          "scaling": "level",
+          "levelBreaks": [1, 6, 11, 16],
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Refreshes whenever he takes non-minion damage or is crowd-controlled; resets on death."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Maokai": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "levelRange": [30, 20],
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Each ability cast, Sapling Toss hit on a champion/epic monster, or enemy ability hitting him cuts it by 4s."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Naafiri": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [30, 25, 20, 15, 10],
+          "scaling": "level",
+          "levelBreaks": [1, 6, 9, 12, 15],
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Ability hits on champions or large monsters cut it by 4s; kills by 1s."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Nocturne": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [12],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Basic attacks cut it by 1s (3s against champions)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Shen": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [11],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Starts on gaining the shield. Affecting another champion with an ability cuts it by 4-8s (by level)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Vex": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [25, 22, 19, 16],
+          "scaling": "level",
+          "levelBreaks": [1, 6, 11, 16],
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Resets on death."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Xerath": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [16],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Kills cut the cooldown."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Zac": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [300],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Ziggs": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [12],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Starts on attack. Casting an ability cuts it by 4-6s (by level)."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Zilean": {
+      "verifiedPatch": "16.19",
+      "abilities": {
+        "P": {
+          "cooldown": [120],
+          "scaling": "flat",
+          "static": true,
+          "note": "Passive timer from the LoL Wiki ability data (API audit, V26.19).",
+          "mechanics": [
+            "Starts after it triggers; disabled once Zilean and allies are max level."
+          ],
+          "verifiedPatch": "16.19"
+        }
+      }
+    },
+    "Kled": {
+      "verifiedPatch": "16.19",
+      "abilities": {},
+      "note": "Data Dragon only describes mounted Kled. Dismounted, Q becomes Pocket Pistol, a charge ability.",
+      "forms": [
+        {
+          "name": "Mounted",
+          "short": "Mounted",
+          "abilities": {}
+        },
+        {
+          "name": "Dismounted",
+          "short": "Dismounted",
+          "abilities": {
+            "Q": {
+              "name": "Pocket Pistol",
+              "from": 0,
+              "cooldown": [3, 3, 3, 3, 3],
+              "ammo": {
+                "max": [2, 2, 2, 2, 2],
+                "recharge": [18, 16, 14, 12, 10]
+              },
+              "verifiedPatch": "16.19",
+              "mechanics": [
+                "Both charges are restored on dismounting."
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

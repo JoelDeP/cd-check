@@ -25,145 +25,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { shortPatch } from '../js/patch.js';
+import {
+  UA, fetchPages, loadChampionModule, listOf, parseRankValue, templateFields, findMaxCharges,
+} from './lib/wiki.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DD = 'https://ddragon.leagueoflegends.com';
 const MERAKI = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json';
-const WIKI = 'https://wiki.leagueoflegends.com/en-us';
-const UA = { 'User-Agent': 'cd-check-dev-sync (github.com/JoelDeP/cd-check)' };
 const SLOTS = ['Q', 'W', 'E', 'R'];
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function get(url, as = 'json') {
   const res = await fetch(url, { headers: UA });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return as === 'json' ? res.json() : res.text();
-}
-
-/* ------------------------------------------------------------ Lua tables */
-
-/** Minimal parser for the wiki's Lua data modules: tables, strings, numbers, booleans. */
-function parseLua(src) {
-  let i = src.indexOf('return');
-  i = src.indexOf('{', i);
-  const ws = () => {
-    for (;;) {
-      while (i < src.length && /\s/.test(src[i])) i += 1;
-      if (src.startsWith('--', i)) { while (i < src.length && src[i] !== '\n') i += 1; continue; }
-      break;
-    }
-  };
-  const str = () => {
-    const q = src[i]; i += 1;
-    let out = '';
-    while (src[i] !== q) {
-      if (src[i] === '\\') { out += src[i + 1]; i += 2; } else { out += src[i]; i += 1; }
-    }
-    i += 1;
-    return out;
-  };
-  const value = () => {
-    ws();
-    const c = src[i];
-    if (c === '{') return table();
-    if (c === '"' || c === "'") return str();
-    const kw = /^(true|false|nil)\b/.exec(src.slice(i, i + 6));
-    if (kw) {
-      i += kw[0].length;
-      return kw[0] === 'true' ? true : kw[0] === 'false' ? false : null;
-    }
-    // Numbers, including stat arithmetic such as 1000+1000/17.
-    const m = /^-?[\d.(][\d.+\-*/() eE]*/.exec(src.slice(i, i + 80));
-    if (!m) throw new Error(`lua parse error at ${i}: ${src.slice(i, i + 30)}`);
-    const expr = m[0].trim();
-    i += m[0].length;
-    if (!/^[\d.+\-*/() eE]+$/.test(expr)) throw new Error(`unsafe expression ${expr}`);
-    return Number(Function(`"use strict"; return (${expr});`)());
-  };
-  const table = () => {
-    i += 1; // {
-    const obj = {};
-    const arr = [];
-    let keyed = false;
-    for (;;) {
-      ws();
-      if (src[i] === '}') { i += 1; break; }
-      if (src[i] === '[') {
-        i += 1; ws();
-        const k = src[i] === '"' || src[i] === "'" ? str() : value();
-        ws(); i += 1; ws(); i += 1; // ] =
-        obj[k] = value();
-        keyed = true;
-      } else if (/[A-Za-z_]/.test(src[i]) && /^[A-Za-z_]\w*\s*=/.test(src.slice(i, i + 60))) {
-        const m = /^([A-Za-z_]\w*)\s*=/.exec(src.slice(i, i + 60));
-        i += m[0].length;
-        obj[m[1]] = value();
-        keyed = true;
-      } else {
-        arr.push(value());
-      }
-      ws();
-      if (src[i] === ',' || src[i] === ';') i += 1;
-    }
-    if (!keyed) return arr;
-    arr.forEach((v, idx) => { obj[idx + 1] = v; });
-    return obj;
-  };
-  return table();
-}
-
-/* ------------------------------------------------- wiki value templates */
-
-const round2 = (n) => Math.round(n * 100) / 100;
-
-/** "{{ap|35 to 25}}", "{{ap|3|3|4|4|5}}", "{{fd|0.5}}", "30" -> array of n per-rank values. */
-function parseRankValue(raw, n) {
-  if (raw === undefined || raw === null) return null;
-  let s = String(raw).trim();
-  if (!s) return null;
-  const fd = /^\{\{fd\|([\d.]+)\}\}$/.exec(s);
-  if (fd) s = fd[1];
-  if (/^[\d.]+$/.test(s)) return Array(n).fill(Number(s));
-  const ap = /^\{\{ap\|(.+)\}\}$/.exec(s);
-  if (!ap) return null; // {{pp|...}} (level-based) and anything else: not parsed
-  const inner = ap[1].trim();
-  const to = /^([\d.]+)\s+to\s+([\d.]+)(?:\s+for\s+(\d+))?$/.exec(inner);
-  if (to) {
-    const a = Number(to[1]);
-    const b = Number(to[2]);
-    const count = to[3] ? Number(to[3]) : n;
-    if (count === 1) return [a];
-    return Array.from({ length: count }, (_, k) => round2(a + ((b - a) * k) / (count - 1)));
-  }
-  const parts = inner.split('|').map((p) => p.trim());
-  if (parts.every((p) => /^[\d.]+$/.test(p))) {
-    const nums = parts.map(Number);
-    return nums.length === 1 ? Array(n).fill(nums[0]) : nums;
-  }
-  return null;
-}
-
-function templateFields(text) {
-  const out = {};
-  for (const line of text.split('\n')) {
-    const m = /^\|(\w+)\s*=\s*(.*)$/.exec(line);
-    if (m) out[m[1]] = m[2].trim();
-  }
-  return out;
-}
-
-/** "{{st|Maximum Charges|{{ap|3 to 5}}}}" anywhere in the template. */
-function findMaxCharges(text, n) {
-  const re = /\{\{st\|([^|{}]*(?:[Cc]harge|[Tt]raps|[Ss]tored|[Kk]egs|[Ss]entinels|[Aa]mmo)[^|{}]*)\|(\{\{ap\|[^}]+\}\}|[\d.]+)\}\}/g;
-  for (const m of text.matchAll(re)) {
-    if (!/max/i.test(m[1])) continue;
-    const v = parseRankValue(m[2], n);
-    if (v) return { label: m[1], values: v };
-  }
-  // Prose form: "... periodically stocks a Hawkshot charge, up to a maximum of 2."
-  const prose = /up to a maximum of (\d+)(?!\s*(?:seconds|%|stacks? of))/i.exec(text);
-  if (prose) return { label: 'prose', values: Array(n).fill(Number(prose[1])) };
-  return null;
 }
 
 /* ------------------------------------------------------------------ run */
@@ -179,7 +53,7 @@ const meraki = await get(MERAKI);
 const merakiByKey = Object.fromEntries(Object.values(meraki).map((c) => [Number(c.id), c]));
 
 console.log('Wiki Module:ChampionData/data...');
-const wikiData = parseLua(await get(`${WIKI}/Module:ChampionData/data?action=raw`, 'text'));
+const wikiData = await loadChampionModule();
 const wikiByKey = {};
 for (const [name, c] of Object.entries(wikiData)) if (c && c.id) wikiByKey[Number(c.id)] = { name, ...c };
 
@@ -191,7 +65,6 @@ const LANE = {
 };
 const ORDER = ['top', 'jungle', 'mid', 'bot', 'support'];
 const norm = (list) => [...new Set((list || []).map((p) => LANE[p]).filter(Boolean))].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
-const listOf = (v) => (Array.isArray(v) ? v : v && typeof v === 'object' ? Object.values(v) : []);
 
 const lanes = {};
 const laneNotes = {};
@@ -243,7 +116,18 @@ for (const c of Object.values(dd)) {
 const charges = {};
 const notCharges = {};
 const chargeProblems = [];
-console.log(`Checking ${candidates.size} charge candidates against the wiki (1 req/s)...`);
+
+// One batched API pass for every candidate's ability page (50 per request).
+const titleOf = (id) => {
+  const [champId, slot] = id.split(':');
+  const w = wikiByKey[Number(dd[champId].key)];
+  const ability = listOf(w?.[`skill_${slot.toLowerCase()}`])[0];
+  return w && ability ? { title: `Template:Data ${w.name}/${ability}`, ability } : null;
+};
+const titles = [...candidates.keys()].map(titleOf).filter(Boolean).map((t) => t.title);
+console.log(`Checking ${candidates.size} charge candidates against the wiki (${Math.ceil(titles.length / 50)} batched request(s))...`);
+const pages = await fetchPages(titles);
+
 for (const [id, why] of candidates) {
   const [champId, slot] = id.split(':');
   const c = dd[champId];
@@ -252,16 +136,17 @@ for (const [id, why] of candidates) {
   const n = spell.maxrank;
   const m = merakiByKey[Number(c.key)]?.abilities?.[slot]?.[0];
   const mRecharge = Array.isArray(m?.rechargeRate) && m.rechargeRate.some((x) => x > 0) ? m.rechargeRate : null;
-  const w = wikiByKey[Number(c.key)];
-  const wikiAbility = listOf(w?.[`skill_${slot.toLowerCase()}`])[0];
-
-  let wikiText = '';
-  if (w && wikiAbility) {
-    const url = `${WIKI}/Template:Data_${encodeURIComponent(w.name.replace(/ /g, '_'))}/${encodeURIComponent(wikiAbility.replace(/ /g, '_'))}?action=raw`;
-    try { wikiText = await get(url, 'text'); } catch (err) { wikiText = ''; }
-    await sleep(1000);
-  }
+  const t = titleOf(id);
+  const wikiAbility = t?.ability;
+  const wikiText = (t && pages.get(t.title)) || '';
   const f = templateFields(wikiText);
+  // A recharge wrapped in a tooltip that names a condition ("...with the
+  // Transcendent bonus") only applies sometimes: not a charge ability by default.
+  const recNote = /^\{\{tt\|.+\|(.+)\}\}$/.exec(f.recharge || '')?.[1] || '';
+  if (/\b(with|when|while|during|after|bonus|empowered|upgraded?)\b/i.test(recNote)) {
+    notCharges[id] = { name: wikiAbility, why, conditional: recNote, wikiCooldown: parseRankValue(f.cooldown, spell.maxrank), ddragonCooldown: spell.cooldown, cooldownWrong: false };
+    continue;
+  }
   const wRecharge = parseRankValue(f.recharge, n);
   const wBetween = parseRankValue(f.static, n) || parseRankValue(f.cooldown, n);
   const wCooldown = parseRankValue(f.cooldown, n);

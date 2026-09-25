@@ -222,6 +222,14 @@
       "ddragonCooldown": [0.25, 0.25, 0.25, 0.25, 0.25],
       "cooldownWrong": true
     },
+    "Syndra:Q": {
+      "name": "Dark Sphere",
+      "why": "meraki rechargeRate only",
+      "conditional": "Recharge timer for Dark Sphere with the Transcendent bonus",
+      "wikiCooldown": [7, 7, 7, 7, 7],
+      "ddragonCooldown": [7, 7, 7, 7, 7],
+      "cooldownWrong": false
+    },
     "Warwick:W": {
       "name": "Blood Hunt",
       "why": "ddragon maxammo",
@@ -230,12 +238,5 @@
       "cooldownWrong": false
     }
   },
-  "unverified": [
-    {
-      "id": "Syndra:Q",
-      "why": "meraki rechargeRate only",
-      "problem": "wiki recharge not parseable: {{tt|7|Recharge timer for Dark Sphere with the Transcendent bonus}}",
-      "meraki": [7, 7, 7, 7, 7]
-    }
-  ]
+  "unverified": []
 }

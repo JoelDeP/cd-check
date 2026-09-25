@@ -373,6 +373,45 @@ Both carry `verifiedPatch`; `tools/stale-overrides.mjs` says when to rerun
 the script. **Don't hand-edit them** — corrections go in `overrides.json`: a
 champion's `"lanes": ["top", "jungle"]`, or an ability's `ammo`.
 
+### Full audit against the wiki
+
+```bash
+node tools/wiki-audit.mjs                 # fetch + compare (about 25 requests)
+node tools/wiki-audit.mjs --cache a.json  # keep the fetched pages to re-run offline
+```
+
+Checks every current ability the wiki lists (about 930, forms included)
+against what the app actually shows (Data Dragon + overrides + generated
+data): missed charge abilities, recharge/charge mismatches, per-rank cooldown
+differences, static cooldowns the app would haste, level-scaled cooldowns, and
+passive cooldowns the app lacks. It reads through the MediaWiki API in batches
+of 50 pages, at least 1.5s apart, with a descriptive User-Agent, and changes
+nothing: it prints a report to act on. Worth running after big patches.
+
+The first run (16.19) found and fixed, all now in `overrides.json`:
+
+- **Missed charge ability:** Kled's dismounted Q, *Pocket Pistol* (2
+  charges, 18→10s recharge, 3s between casts) — Data Dragon only describes
+  mounted Kled. Kled now has Mounted / Dismounted tabs.
+- **Data Dragon publishes 0 for real cooldowns:** Tahm Kench R (120/100/80),
+  Kalista E (10→8), Rakan E (20→12), Talon E (2s), Veigar W (8s).
+- **Static cooldowns the app was reducing with haste:** Amumu W, Aphelios W,
+  Jinx Q, Karthus E, Rek'Sai W (burrowed), Samira R, Singed Q, Yuumi W
+  (10/5/0 by level), K'Sante Q.
+- **Passive cooldowns added** (18): Alistar, Anivia, Azir, Blitzcrank, Galio,
+  Gragas, LeBlanc, Malphite, Malzahar, Maokai, Naafiri, Nocturne, Shen, Vex,
+  Xerath, Zac, Ziggs, Zilean — with their reductions as ↻ notes.
+- **Mechanics notes:** Hecarim Q (Rampage stacks), Veigar W (Phenomenal
+  Evil), K'Sante Q (bonus resistances), Zeri Q (1 / attack speed), Syndra Q
+  (2 charges only with her Transcendent bonus).
+
+Left as they are, on purpose: **Mel W** (Data Dragon 38/35/33/29/26, wiki
+38→26 i.e. 32 at rank 3 — can't tell which is right, kept Data Dragon);
+passives whose wiki timer isn't a real cooldown or is ambiguous (Sion's Death
+Surge, Taliyah, Yuumi); cooldowns that are formulas of stacks, attack speed or
+resistances (Hecarim, Veigar, K'Sante, Zeri, Yasuo, Yone, Quinn…), which get a
+note rather than a number.
+
 ## Haste: how every cooldown is calculated
 
 All cooldowns in the app — Champion tab, Sort view, Matchup — go through one
@@ -547,6 +586,8 @@ tools/make-icons.mjs    regenerates the PNG icons
 tools/stale-overrides.mjs  lists overrides + haste sources to re-verify after a patch
 tools/stamp-build.mjs   validates data + stamps sw.js before a push
 tools/sync-lanes-charges.mjs  regenerates data/lanes.json + data/charges.json
+tools/wiki-audit.mjs    compares every ability the app shows with the LoL Wiki
+tools/lib/wiki.mjs      polite MediaWiki API access + wiki value parsing
 tools/hooks/pre-push    blocks pushing main without a fresh stamp
 ```
 

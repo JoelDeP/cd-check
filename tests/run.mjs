@@ -375,6 +375,69 @@ test('item grid order: your history first, then items that fit the champion', ()
   eq(m.indexOf('3118') < m.indexOf('3071'), true, 'Malignance before Black Cleaver for a mage');
 });
 
+/* ------------------------------------------------ wiki value parsing */
+
+const wikiLib = await import('../tools/lib/wiki.mjs');
+
+test('wiki parser: rank values in their many shapes', () => {
+  const R = wikiLib.parseRankValue;
+  eq(R('{{tt|{{ap|9 to 5}}|Starts post-effect}}', 5), [9, 8, 7, 6, 5]);
+  eq(R('{{ap|16 to 6 6}}', 6), [16, 14, 12, 10, 8, 6]);
+  eq(R('{{ap|3|3|4|4|5}}', 5), [3, 3, 4, 4, 5]);
+  eq(R('{{fd|0.5}}', 3), [0.5, 0.5, 0.5]);
+  eq(R('12 / 11 / 10', 3), [12, 11, 10]);
+  eq(R('{{pp|1;2|1;6}}', 5), null, 'level values are not rank values');
+});
+
+test('wiki parser: level values, and refusing to guess', () => {
+  const L = wikiLib.parseLevelValue;
+  eq(L('{{pp|12 to 6|1;6;11;16}}'), { values: [12, 10, 8, 6], levels: [1, 6, 11, 16] });
+  eq(L('{{pp|14 to 8 for 3|1 to 13}}'), { values: [14, 11, 8], levels: [1, 7, 13] });
+  eq(L('{{pplevel|22 to 10}}').values.length, 18);
+  eq(L('{{pp|16 to 12 for 9|formula=16.5 - 0.5 * level, capped at level 9}}'), null, 'formula without levels');
+  eq(L('{{pp|4-0.75*(x-1)|0 to 3 by 1|type=Rampage stacks}}'), null, 'scales with stacks, not level');
+});
+
+test('wiki parser: nested templates split correctly', () => {
+  eq(wikiLib.splitTemplate('{{tt|{{ap|9 to 5}}|note|x}}'), { name: 'tt', args: ['{{ap|9 to 5}}', 'note', 'x'] });
+  eq(wikiLib.splitTemplate('{{a}} {{b}}'), null);
+});
+
+/* ------------------------------------------- audit corrections applied */
+
+const overrides = read('data/overrides.json');
+const fakeWith = (id, cds, extra = {}) => buildChampion('16.19.1', fakeChamp(id, cds.map((c, i) => ({ name: `${id}${i}`, cooldown: c }))), overrides, extra);
+
+test('audit: Data Dragon zeros corrected (Tahm Kench R, Kalista E, Rakan E)', () => {
+  eq(fakeWith('TahmKench', [[5], [5], [5], [0, 0, 0]]).forms[0].abilities.R.cooldown, [120, 100, 80]);
+  eq(fakeWith('Kalista', [[5], [5], [0, 0, 0, 0, 0], [5]]).forms[0].abilities.E.cooldown, [10, 9.5, 9, 8.5, 8]);
+  eq(fakeWith('Rakan', [[5], [5], [0, 0, 0, 0, 0], [5]]).forms[0].abilities.E.cooldown, [20, 18, 16, 14, 12]);
+});
+
+test('audit: static toggles/swaps ignore haste (Jinx Q)', () => {
+  const q = fakeWith('Jinx', [[0.9, 0.9, 0.9, 0.9, 0.9], [5], [5], [5]]).forms[0].abilities.Q;
+  eq(abilityCooldown(q, 0, { ability: 50, basic: 0, ultimate: 0, summoner: 0, item: 0 }).final, 0.9);
+});
+
+test('audit: Kled has a Dismounted form with Pocket Pistol charges', () => {
+  const kled = fakeWith('Kled', [[11, 10, 9, 8, 7], [5], [5], [5]], { charges: read('data/charges.json') });
+  eq(kled.forms.map((f) => f.short), ['Mounted', 'Dismounted']);
+  const pp = kled.forms[1].abilities.Q;
+  eq([pp.name, pp.ammo.recharge, pp.ammo.max], ['Pocket Pistol', [18, 16, 14, 12, 10], [2, 2, 2, 2, 2]]);
+  eq(kled.forms[0].abilities.Q.ammo, null, 'mounted Q is a normal cooldown');
+});
+
+test('audit: passive cooldowns added and static (Malzahar by level)', () => {
+  const p = fakeWith('Malzahar', [[5], [5], [5], [5]]).forms[0].abilities.P;
+  eq([p.cooldown, p.levelBreaks, p.static], [[30, 24, 18, 12], [1, 6, 11, 16], true]);
+});
+
+test('Syndra Q stays a normal cooldown (charges only with her passive bonus)', () => {
+  const cj = read('data/charges.json');
+  eq(Boolean(cj.charges['Syndra:Q']), false);
+  eq(Boolean(cj.notCharges['Syndra:Q']?.conditional), true);
+});
+
 /* ------------------------------------------------------------ data */
 
 test('every haste source has a verifiedPatch', () => {
