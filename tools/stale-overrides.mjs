@@ -5,6 +5,8 @@
  *
  *   node tools/stale-overrides.mjs            # compare against the live patch
  *   node tools/stale-overrides.mjs 16.21      # pretend the live patch is 16.21
+ *   --json file   also write the stale list as JSON (used by tools/patch-day.mjs)
+ *   --quiet       skip the table
  *
  * For each stale entry it prints the value we ship next to what Data Dragon
  * publishes today, which is usually enough to spot what changed. After
@@ -33,13 +35,20 @@ async function getJson(url) {
   return res.json();
 }
 
-const argPatch = process.argv[2];
+// Flags take a value (--json file); the remaining positional arg is a patch to simulate.
+const argv = process.argv.slice(2);
+const flag = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : null; };
+const jsonOut = flag('--json');
+const quiet = argv.includes('--quiet');
+const argPatch = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--json');
 const ddragonPatch = (await getJson(`${CDN}/api/versions.json`))[0];
 const livePatch = argPatch || ddragonPatch;
 
 /* ------------------------------------------------------------ collect */
 
 const stale = [];
+// What an entry claims: numbers the wiki audit can re-check, or prose it can't.
+const assertsOf = (a) => Object.keys(a).filter((k) => !['verifiedPatch', 'from'].includes(k));
 
 function check(where, verifiedPatch, extra = {}) {
   const v = staleness(verifiedPatch, livePatch);
@@ -56,7 +65,7 @@ for (const [champ, entry] of Object.entries(overrides.champions || {})) {
 
   for (const [slot, a] of Object.entries(entry.abilities || {})) {
     touched = true;
-    check({ kind: 'ability', champ, slot }, a.verifiedPatch || entryPatch, { ours: a.cooldown || null, note: a.note });
+    check({ kind: 'ability', champ, slot }, a.verifiedPatch || entryPatch, { ours: a.cooldown || null, note: a.note, asserts: assertsOf(a) });
   }
   for (const form of entry.forms || []) {
     for (const [slot, a] of Object.entries(form.abilities || {})) {
@@ -64,7 +73,7 @@ for (const [champ, entry] of Object.entries(overrides.champions || {})) {
       check(
         { kind: 'ability', champ, slot, form: form.short || form.name, from: a.from },
         a.verifiedPatch || entryPatch,
-        { ours: a.cooldown || null }
+        { ours: a.cooldown || null, asserts: assertsOf(a) }
       );
     }
   }
@@ -149,21 +158,21 @@ console.log(`Live patch: ${shortPatch(livePatch)}${argPatch ? ` (simulated; Data
 
 // process.exitCode rather than process.exit(): exiting while fetch's sockets
 // are still closing trips a libuv assertion on Windows.
+const labelOf = (w) => (w.kind === 'summoner' ? w.id : w.kind === 'haste' ? w.label
+  : `${w.champ}${w.slot ? ` ${w.slot}` : ''}${w.form ? ` [${w.form}]` : ''}`);
+if (jsonOut) {
+  fs.writeFileSync(jsonOut, JSON.stringify({ livePatch: shortPatch(livePatch), stale: stale.map((x) => ({ ...x, label: labelOf(x.where) })) }, null, 1));
+}
+
 if (!stale.length) {
   console.log('All overrides are verified for this patch.');
   process.exitCode = 0;
+} else if (quiet) {
+  console.log(`${stale.length} stale override${stale.length === 1 ? '' : 's'} (run without --quiet for the table).`);
 } else {
   console.log(`${stale.length} stale override${stale.length === 1 ? '' : 's'}:\n`);
 
-  const rows = stale.map((s) => {
-    const w = s.where;
-    const label = w.kind === 'summoner'
-      ? w.id
-      : w.kind === 'haste'
-        ? w.label
-        : `${w.champ}${w.slot ? ` ${w.slot}` : ''}${w.form ? ` [${w.form}]` : ''}`;
-    return [label, s.verified, fmt(s.ours), fmt(ddragonValue(s))];
-  });
+  const rows = stale.map((s) => [labelOf(s.where), s.verified, fmt(s.ours), fmt(ddragonValue(s))]);
   const head = ['override', 'verified', 'ours', 'Data Dragon now'];
   const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
   const line = (r) => r.map((c, i) => c.padEnd(widths[i])).join('  ');
@@ -173,5 +182,5 @@ if (!stale.length) {
 
   console.log('\nAfter re-checking each against the LoL Wiki, bump its verifiedPatch.');
   console.log('"Data Dragon now" is the merged/raw value; for form-swap champions it is expected to differ from ours.');
-  process.exitCode = 1;
 }
+if (stale.length) process.exitCode = 1;

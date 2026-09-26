@@ -30,6 +30,11 @@ import {
 } from './lib/wiki.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+// --json file: also write a summary (used by tools/patch-day.mjs); --quiet: skip per-ability lists.
+const argv = process.argv.slice(2);
+const jsonOut = argv.includes('--json') ? argv[argv.indexOf('--json') + 1] : null;
+const quiet = argv.includes('--quiet');
+
 const DD = 'https://ddragon.leagueoflegends.com';
 const MERAKI = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json';
 const SLOTS = ['Q', 'W', 'E', 'R'];
@@ -196,7 +201,19 @@ const write = (file, obj) => {
   let out = JSON.stringify(obj, null, 2);
   out = out.replace(/\[\s*(-?[\d.]+(?:,\s*-?[\d.]+)*)\s*\]/g, (_, inner) => `[${inner.split(',').map((s) => s.trim()).join(', ')}]`);
   out = out.replace(/\[\s*("[^"\n]*"(?:,\s*"[^"\n]*")*)\s*\]/g, (_, inner) => `[${inner.split(/,\s*/).join(', ')}]`);
-  fs.writeFileSync(path.join(ROOT, file), `${out}\n`);
+  // Only the date changed? Leave the file alone so reruns don't create churn.
+  const target = path.join(ROOT, file);
+  const strip = (o) => ({ ...o, generated: undefined });
+  try {
+    const prev = JSON.parse(fs.readFileSync(target, 'utf8'));
+    if (JSON.stringify(strip(prev)) === JSON.stringify(strip(obj))) {
+      console.log(`${file}: unchanged`);
+      return false;
+    }
+  } catch { /* first run */ }
+  fs.writeFileSync(target, `${out}\n`);
+  console.log(`${file}: written`);
+  return true;
 };
 
 write('data/lanes.json', {
@@ -225,10 +242,27 @@ const laneCounts = Object.fromEntries(ORDER.map((l) => [l, Object.values(lanes).
 console.log('  per lane:', laneCounts);
 if (laneUnverified.length) console.log('  UNVERIFIED lanes:', laneUnverified.join(', '));
 console.log(`\nCharges: ${Object.keys(charges).length} real charge abilities, ${Object.keys(notCharges).length} flagged but not charges, ${chargeProblems.length} unverified.`);
+
+if (jsonOut) {
+  fs.writeFileSync(jsonOut, JSON.stringify({
+    patch: verifiedPatch,
+    lanes: { count: Object.keys(lanes).length, differFromMeraki: Object.keys(laneNotes), unverified: laneUnverified },
+    charges: {
+      count: Object.keys(charges).length,
+      dataDragonWrong: Object.entries(notCharges).filter(([, v]) => v.cooldownWrong).map(([id]) => id),
+      conditional: Object.entries(notCharges).filter(([, v]) => v.conditional).map(([id]) => id),
+      unverified: chargeProblems,
+    },
+  }, null, 1));
+}
+if (quiet) {
+  if (chargeProblems.length) console.log(`  UNVERIFIED: ${chargeProblems.map((p) => p.id).join(', ')}`);
+} else {
 for (const [id, v] of Object.entries(charges)) console.log(`  ${id.padEnd(16)} ${v.name.padEnd(24)} max ${JSON.stringify(v.max)} recharge ${JSON.stringify(v.recharge)} between ${JSON.stringify(v.between)}  [${v.source}; max from ${v.maxSource}]`);
 console.log('  -- flagged by Data Dragon but NOT charge abilities:');
 for (const [id, v] of Object.entries(notCharges)) console.log(`  ${id.padEnd(16)} ${String(v.name).padEnd(24)} wiki cd ${JSON.stringify(v.wikiCooldown)} vs DD ${JSON.stringify(v.ddragonCooldown)}${v.cooldownWrong ? '  <- DATA DRAGON WRONG' : ''}${v.unparsedCooldown ? `  (unparsed: ${v.unparsedCooldown})` : ''}`);
 if (chargeProblems.length) {
   console.log('  -- UNVERIFIED:');
   for (const p of chargeProblems) console.log(`  ${p.id.padEnd(16)} ${p.problem}${p.meraki ? `  (meraki says ${JSON.stringify(p.meraki)})` : ''}`);
+}
 }

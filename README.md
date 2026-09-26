@@ -320,26 +320,74 @@ patch is newer than an entry's `verifiedPatch`, the app stops trusting it
 silently: the ability shows an amber **verified on 16.19** pill (and the ⚠
 tooltip explains). Nothing is hidden; you just know to double-check.
 
-After each patch, list what needs re-checking:
-
-```bash
-node tools/stale-overrides.mjs          # against the live patch
-node tools/stale-overrides.mjs 16.21    # simulate a future patch
-```
-
-It prints every stale entry with our value next to what Data Dragon publishes
-today, and exits 1 if anything is stale. Re-verify each against the LoL Wiki,
-then bump its `verifiedPatch`. Values that come straight from Data Dragon are
-never flagged — they're always current by definition.
+After each patch, run [patch day](#patch-day), which lists what needs
+re-checking. On its own, `node tools/stale-overrides.mjs` (optionally with a
+patch to simulate, e.g. `16.21`) prints every stale entry with our value next
+to what Data Dragon publishes today. Values that come straight from Data
+Dragon are never flagged — they're always current by definition.
 
 Search aliases live in `data/nicknames.json`. Prefix matches (`trynd`) and
 initials (`mf`) are automatic, so only add genuinely irregular nicknames.
 
 ---
 
+## Patch day
+
+When Riot ships a patch, run one command:
+
+```bash
+node tools/patch-day.mjs
+```
+
+It runs the three checks below in order, then prints **one summary** of what
+needs re-verifying:
+
+1. **stale-overrides** — hand-verified entries in `overrides.json` and
+   `haste-sources.json` whose `verifiedPatch` the new patch has moved past.
+2. **sync-lanes-charges** — regenerates `data/lanes.json` and
+   `data/charges.json` (only rewritten if something actually changed).
+3. **wiki-audit** — compares every ability the app shows with the LoL Wiki.
+
+The summary cross-references them so you don't re-check everything by hand:
+
+- **"Wiki still agrees — just bump verifiedPatch"**: stale entries whose
+  numbers the audit compared this run and found unchanged. Bump them.
+- **"Check by hand"**: stale entries with prose the audit can't judge
+  (mechanics notes, caveats), numbers it couldn't compare (formula-based
+  cooldowns), known disagreements whose reason should still hold, and haste
+  sources (runes, drakes, items), each with the reason.
+- **Generated data**: which lanes and charge abilities changed — review those
+  before shipping — and anything the sync couldn't verify.
+- **Wiki audit**: *new* differences to fix, and previously reviewed ones whose
+  values moved. Findings already reviewed and left on purpose live in
+  `tools/audit-known.json` with the values seen at the time; they stay hidden
+  only while those values are unchanged.
+
+It exits 0 when nothing needs doing, 1 when there's something to go through,
+2 if a step failed. Options:
+
+```bash
+node tools/patch-day.mjs --cache wiki.json     # reuse wiki pages fetched by an earlier run
+node tools/patch-day.mjs --simulate 16.21      # preview: pretend the live patch is newer
+node tools/patch-day.mjs --acknowledge         # after reviewing, accept this run's audit findings
+```
+
+`--acknowledge` records the current audit findings in `audit-known.json`,
+keeping existing reasons; new entries are marked "add a reason" so you can say
+why they're fine.
+
+A typical patch day: run it → bump what the wiki confirms → re-check the
+hand list against the wiki → fix any new differences in `overrides.json` →
+`--acknowledge` what you're deliberately leaving → `node tests/run.mjs` →
+commit → `node tools/stamp-build.mjs` → `git push`.
+
+The three steps still work on their own; they're described below.
+
+---
+
 ## Lanes and charges
 
-Two generated files, rebuilt after each patch with:
+Two generated files, rebuilt after each patch (step 2 of patch day) with:
 
 ```bash
 node tools/sync-lanes-charges.mjs
@@ -374,6 +422,8 @@ the script. **Don't hand-edit them** — corrections go in `overrides.json`: a
 champion's `"lanes": ["top", "jungle"]`, or an ability's `ammo`.
 
 ### Full audit against the wiki
+
+Step 3 of [patch day](#patch-day); on its own:
 
 ```bash
 node tools/wiki-audit.mjs                 # fetch + compare (about 25 requests)
@@ -588,7 +638,9 @@ tools/make-icons.mjs    regenerates the PNG icons
 tools/stale-overrides.mjs  lists overrides + haste sources to re-verify after a patch
 tools/stamp-build.mjs   validates data + stamps sw.js before a push
 tools/sync-lanes-charges.mjs  regenerates data/lanes.json + data/charges.json
+tools/patch-day.mjs     runs the three checks below + one summary (use this)
 tools/wiki-audit.mjs    compares every ability the app shows with the LoL Wiki
+tools/audit-known.json  audit findings reviewed and deliberately left
 tools/lib/wiki.mjs      polite MediaWiki API access + wiki value parsing
 tools/hooks/pre-push    blocks pushing main without a fresh stamp
 ```

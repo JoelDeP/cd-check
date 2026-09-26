@@ -3,7 +3,7 @@
  * the LoL Wiki's ability data, via the MediaWiki API (batched 50 pages per
  * request, 1.5s apart, descriptive User-Agent - see tools/lib/wiki.mjs).
  *
- *   node tools/wiki-audit.mjs [--cache file.json] [--json report.json]
+ *   node tools/wiki-audit.mjs [--cache file.json] [--json report.json] [--quiet]
  *
  * --cache reuses previously fetched wikitext (and writes it on first run), so
  * re-analysing doesn't hit the wiki again.
@@ -34,6 +34,7 @@ const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 const arg = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };
 const cacheFile = arg('--cache');
 const jsonOut = arg('--json');
+const quiet = process.argv.includes('--quiet');
 
 const DD = 'https://ddragon.leagueoflegends.com';
 const patch = (await (await fetch(`${DD}/api/versions.json`)).json())[0];
@@ -96,6 +97,8 @@ function findAppAbility(champId, slot, name) {
 const findings = [];
 const add = (type, x, detail) => findings.push({ type, champ: x.champId, slot: x.slot, ability: x.ability, ...detail });
 let checked = 0;
+// Abilities whose numbers were actually compared (for tools/patch-day.mjs).
+const compared = [];
 let missingPages = 0;
 
 for (const x of wanted) {
@@ -116,7 +119,20 @@ for (const x of wanted) {
   if (x.slot === 'P') {
     const cd = wikiCd || wikiStatic || wikiCdLevel || wikiStaticLevel;
     const appP = app[x.champId]?.forms[0].abilities.P;
-    if (cd && appP && !appP.cooldown.length) add('passive', x, { wiki: Array.isArray(cd) ? fmtArr(cd) : `${fmtArr(cd.values)} @L${fmtArr(cd.levels)}`, static: Boolean(wikiStatic || wikiStaticLevel) && !(wikiCd || wikiCdLevel) });
+    const wikiText = cd ? (Array.isArray(cd) ? fmtArr(cd) : `${fmtArr(cd.values)} @L${fmtArr(cd.levels)}`) : '';
+    const sameName = appP && norm(appP.name) === norm(x.ability.replace(/ \d+$/, ''));
+    if (cd && appP && !appP.cooldown.length) {
+      add('passive', x, { wiki: wikiText, static: Boolean(wikiStatic || wikiStaticLevel) && !(wikiCd || wikiCdLevel) });
+    } else if (cd && appP && sameName && appP.cooldown.length) {
+      // The app already shows a passive cooldown (from overrides.json): check it still matches.
+      const wikiVals = Array.isArray(cd) ? [cd[0]] : cd.values;
+      const appVals = appP.scaling === 'flat' ? [appP.cooldown[0]] : appP.cooldown;
+      const levelsOk = Array.isArray(cd) || !appP.levelBreaks || same(appP.levelBreaks, cd.levels);
+      if (!same(appVals, wikiVals) || !levelsOk) {
+        add('passive-mismatch', x, { app: `${fmtArr(appVals)}${appP.levelBreaks ? ` @L${fmtArr(appP.levelBreaks)}` : ''}`, wiki: wikiText });
+      }
+      compared.push({ champ: x.champId, slot: 'P', ability: x.ability });
+    }
     if (unparsed.length) add('unparsed', x, { raw: unparsed });
     checked += 1;
     continue;
@@ -129,6 +145,10 @@ for (const x of wanted) {
   }
   const { a, form } = match;
   checked += 1;
+  // Recorded only when the wiki gave numbers we could compare.
+  if (wikiRecharge || wikiCd || wikiCdLevel || wikiStatic || wikiStaticLevel) {
+    compared.push({ champ: x.champId, slot: x.slot, ability: x.ability, ...(form ? { form } : {}) });
+  }
   const where = form ? { form } : {};
   if (unparsed.length) add('unparsed', x, { raw: unparsed, ...where });
 
@@ -158,8 +178,9 @@ for (const x of wanted) {
 const byType = {};
 for (const f of findings) (byType[f.type] ||= []).push(f);
 console.log(`\nChecked ${checked} abilities (${missingPages} wiki pages missing).`);
-const ORDER = ['charges', 'recharge', 'charges-max', 'cooldown', 'static', 'level', 'passive', 'no-app-match', 'no-wiki-page', 'unparsed'];
-for (const t of ORDER) {
+const ORDER = ['charges', 'recharge', 'charges-max', 'cooldown', 'static', 'level', 'passive', 'passive-mismatch', 'no-app-match', 'no-wiki-page', 'unparsed'];
+if (quiet) console.log(`  ${ORDER.map((t) => `${t}: ${(byType[t] || []).length}`).join(', ')}`);
+for (const t of quiet ? [] : ORDER) {
   const list = byType[t] || [];
   console.log(`\n=== ${t} (${list.length})`);
   for (const f of list) {
@@ -167,4 +188,4 @@ for (const t of ORDER) {
     console.log(`  ${`${champ} ${slot}`.padEnd(18)} ${String(ability).padEnd(26)} ${JSON.stringify(rest)}`);
   }
 }
-if (jsonOut) fs.writeFileSync(jsonOut, JSON.stringify({ patch, findings }, null, 1));
+if (jsonOut) fs.writeFileSync(jsonOut, JSON.stringify({ patch, checked, compared, findings }, null, 1));

@@ -1,0 +1,1002 @@
+{
+ "readme": "Audit findings reviewed and deliberately left as they are. tools/patch-day.mjs hides a finding only if its key AND the values seen still match; if the wiki changes, it comes back. Refresh after reviewing a run with: node tools/patch-day.mjs --acknowledge",
+ "acknowledgedOn": "16.19.1",
+ "known": [
+  {
+   "key": "no-app-match:Aatrox:Q:The Darkin Blade 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "14/12/10/8/6"
+   }
+  },
+  {
+   "key": "no-app-match:Aatrox:Q:The Darkin Blade 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "14/12/10/8/6"
+   }
+  },
+  {
+   "key": "no-app-match:Akali:Q:Five Point Strike 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "1.5/1.5/1.5/1.5/1.5"
+   }
+  },
+  {
+   "key": "no-app-match:Akali:E:Shuriken Flip 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "16/14.5/13/11.5/10"
+   }
+  },
+  {
+   "key": "no-app-match:Akali:R:Perfect Execution 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/90/60"
+   }
+  },
+  {
+   "key": "no-app-match:Akshan:E:Heroic Swing 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "18/16.5/15/13.5/12"
+   }
+  },
+  {
+   "key": "no-app-match:Annie:R:Summon: Tibbers 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "130/115/100"
+   }
+  },
+  {
+   "key": "level:Aphelios:R:Moonlight Vigil",
+   "reason": "His R ranks at exactly 6/11/16, so rank- and level-based values are identical.",
+   "seen": {
+    "app": "120/110/100",
+    "wiki": "120/110/100 @L6/11/16",
+    "static": false
+   }
+  },
+  {
+   "key": "no-app-match:Aurora:Q:Twofold Hex 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/8.5/8/7.5/7"
+   }
+  },
+  {
+   "key": "unparsed:Bard:P:Traveler's Call",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{dv|{{tt|50|Chime spawn rate}}|{{tt|{{pp|changedisplay=true|type = number of Chimes|8 to 4 for 5|0;20;40;55;70}}|Meep spawn rate}}}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Bard:P:Traveler's Call 2",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{dv|{{tt|50|Chime spawn rate}}|{{tt|{{pp|changedisplay=true|type = number of Chimes|8 to 4 for 5|0;20;40;55;70}}|Meep spawn rate}}}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Briar:R:Certain Death 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/100/80"
+   }
+  },
+  {
+   "key": "no-app-match:Camille:Q:Precision Protocol 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/8/7/6/5"
+   }
+  },
+  {
+   "key": "no-app-match:Camille:Q:Precision Protocol 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/8/7/6/5"
+   }
+  },
+  {
+   "key": "no-app-match:Corki:R:Big One",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "20/20/20"
+   }
+  },
+  {
+   "key": "no-app-match:Draven:R:Whirling Death 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "100/90/80"
+   }
+  },
+  {
+   "key": "unparsed:DrMundo:P:Goes Where He Pleases",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{pp|60 to 15 for 6|1;3 to 15 for 5|formula=60 at level 1, then -9 every 3 levels, starting at level 3 and capped at level 15}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Fiora:R:Grand Challenge 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "110/90/70"
+   }
+  },
+  {
+   "key": "no-app-match:Galio:W:Shield of Durand 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "18/17/16/15/14"
+   }
+  },
+  {
+   "key": "no-app-match:Gangplank:Q:Silver Serpents",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "4.5/4.5/4.5/4.5/4.5"
+   }
+  },
+  {
+   "key": "no-app-match:Garen:E:Judgment 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/8.25/7.5/6.75/6"
+   }
+  },
+  {
+   "key": "unparsed:Gnar:Q:Boulder Toss",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "cooldown={{Data Gnar/Boomerang Throw|pst2|cooldown}}"
+    ],
+    "form": "Mega"
+   }
+  },
+  {
+   "key": "unparsed:Gnar:E:Crunch",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "cooldown={{Data Gnar/Hop|pst2|cooldown}}"
+    ],
+    "form": "Mega"
+   }
+  },
+  {
+   "key": "no-app-match:Gragas:Q:Barrel Roll 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "10/9/8/7/6"
+   }
+  },
+  {
+   "key": "no-app-match:Gragas:W:Drunken Rage 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "5/5/5/5/5"
+   }
+  },
+  {
+   "key": "unparsed:Hecarim:Q:Rampage",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "cooldown={{pp|4-0.75*(x-1)|0 to 3 by 1|type=''Rampage'' stacks|formula=4 - 0.75 * [''Rampage'' stacks], capped at 3 stacks.|label=cooldown}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Heimerdinger:Q:H-28Q Apex Turret",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "1/1/1/1/1"
+   }
+  },
+  {
+   "key": "no-app-match:Heimerdinger:W:Hextech Rocket Swarm",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "11/10/9/8/7"
+   }
+  },
+  {
+   "key": "no-app-match:Heimerdinger:E:CH-3X Lightning Grenade",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "11/11/11/11/11"
+   }
+  },
+  {
+   "key": "no-app-match:Illaoi:E:Vessel",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "16/15/14/13/12"
+   }
+  },
+  {
+   "key": "no-app-match:Ivern:R:Daisy, wait!",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "140/130/120"
+   }
+  },
+  {
+   "key": "no-app-match:Jhin:W:Caught Out",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "12/12/12/12/12"
+   }
+  },
+  {
+   "key": "no-app-match:Jhin:R:Curtain Call 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/105/90"
+   }
+  },
+  {
+   "key": "no-app-match:Jhin:R:Curtain Call 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/105/90"
+   }
+  },
+  {
+   "key": "no-app-match:Jinx:Q:Pow-Pow",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "0.9/0.9/0.9/0.9/0.9"
+   }
+  },
+  {
+   "key": "no-app-match:Jinx:Q:Rev'd up",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "0.9/0.9/0.9/0.9/0.9"
+   }
+  },
+  {
+   "key": "no-app-match:Jinx:Q:Fishbones",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "0.9/0.9/0.9/0.9/0.9"
+   }
+  },
+  {
+   "key": "no-app-match:Jinx:E:Flame Chompers! 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "24/20.5/17/13.5/10"
+   }
+  },
+  {
+   "key": "no-app-match:Kaisa:Q:Icathian Rain 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "10/9/8/7/6"
+   }
+  },
+  {
+   "key": "no-app-match:Kaisa:W:Void Seeker 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "20/18.5/17/15.5/14"
+   }
+  },
+  {
+   "key": "no-app-match:Kaisa:E:Supercharge 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "16/14.5/13/11.5/10"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:Q:Reaping Slash A",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "7/6.5/6/5.5/5"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:Q:Reaping Slash R",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "7/6.5/6/5.5/5"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:W:Blade's Reach A",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12/11/10/9"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:W:Blade's Reach R",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12/11/10/9"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:E:Shadow Step A",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "21/19/17/15/13"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:E:Shadow Step R",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "21/19/17/15/13"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:R:Umbral Trespass R",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/100/80"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:R:Umbral Trespass 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/100/80"
+   }
+  },
+  {
+   "key": "no-app-match:Kayn:R:Umbral Trespass 2 R",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/100/80"
+   }
+  },
+  {
+   "key": "unparsed:KSante:Q:Ntofo Strikes",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{dv|{{pp|3.5 to 2 by 0.05|0 to 120|type='''bonus''' resistances|label=cooldown|label1=bonus resistances|formula= 3.5 - 0.0125 × bonus resistances, capped at 120 bonus resistances.}}|{{pp|3.5*2/3 to 2*2/3 by 0.3/9|0 to 120|type='''bonus''' resistances|label=cooldown|label1=bonus resistances|formula= During All Out. 3.5 * 2 / 3 - (0.0125 * 2 / 3) × bonus resistances, capped at 120 bonus resistances.|showtype=false}}}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Leblanc:W:Distortion 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "15/13.75/12.5/11.25/10"
+   }
+  },
+  {
+   "key": "no-app-match:Leblanc:R:Mimic: Sigil of Malice",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "45/35/25"
+   }
+  },
+  {
+   "key": "no-app-match:Leblanc:R:Mimic: Distortion",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "45/35/25"
+   }
+  },
+  {
+   "key": "no-app-match:Leblanc:R:Mimic: Ethereal Chains",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "45/35/25"
+   }
+  },
+  {
+   "key": "no-app-match:Lillia:Q:Prance",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "6/5.5/5/4.5/4"
+   }
+  },
+  {
+   "key": "no-app-match:Lucian:W:Ardent Blaze 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "14/13/12/11/10"
+   }
+  },
+  {
+   "key": "no-app-match:Lucian:W:Ardent Blaze 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "14/13/12/11/10"
+   }
+  },
+  {
+   "key": "cooldown:Mel:W:Rebuttal",
+   "reason": "Data Dragon 33 vs wiki 32 at rank 3; can't tell which is right. Kept Data Dragon with a caveat badge.",
+   "seen": {
+    "app": "38/35/33/29/26",
+    "wiki": "38/35/32/29/26",
+    "static": false
+   }
+  },
+  {
+   "key": "no-wiki-page:Milio:W:Cozy Campfire 2",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-app-match:MissFortune:W:Guns Blazing",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "12/12/12/12/12"
+   }
+  },
+  {
+   "key": "no-app-match:MissFortune:W:Impure Shots",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "12/12/12/12/12"
+   }
+  },
+  {
+   "key": "no-app-match:Mordekaiser:W:Indestructible 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "12/11/10/9/8"
+   }
+  },
+  {
+   "key": "no-app-match:Nautilus:R:Depth Charge 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/100/80"
+   }
+  },
+  {
+   "key": "no-app-match:Nidalee:R:Aspect of the Cougar 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "3/3/3"
+   }
+  },
+  {
+   "key": "unparsed:Poppy:P:Iron Ambassador",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{pp|16 to 8 for 3; 6|1 to 13; 19}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Poppy:P:Iron Ambassador 2",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{pp|16 to 8 for 3; 6|1 to 13; 19}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Poppy:W:Steadfast Presence 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "20/18/16/14/12"
+   }
+  },
+  {
+   "key": "no-app-match:Pyke:R:Death from Below 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "100/85/70"
+   }
+  },
+  {
+   "key": "unparsed:Quinn:P:Harrier",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{tt|{{pp|type=critical strike chance|color=critical chance|7*(0.99^((x-1)*10))|key1=%|0 to 100 by 10|formula=7*(0.99^critical strike chance %)}}|Starts after the mark expired or was consumed or overwritten by another mark.}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Rakan:P:Fey Feathers",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "cooldown={{pp|40 to 14.5 for 18; then -0.875*x for 2|formula=40 - 1.5 * level until level 18, then -0.875 per level}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Rakan:P:Lover's Leap",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "cooldown={{pp|40 to 14.5 for 18; then -0.875*x for 2|formula=40 - 1.5 * level until level 18, then -0.875 per level}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Rakan:E:Battle Dance 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "20/18/16/14/12"
+   }
+  },
+  {
+   "key": "no-app-match:Rell:W:Ferromancy: Mount Up",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "10/10/10/10/10"
+   }
+  },
+  {
+   "key": "no-app-match:Rumble:W:Scrap Shield 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "6/6/6/6/6"
+   }
+  },
+  {
+   "key": "no-app-match:Rumble:E:Electro Harpoon 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "6/6/6/6/6"
+   }
+  },
+  {
+   "key": "no-app-match:Ryze:Q:Overload 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "5/5/5/5/5"
+   }
+  },
+  {
+   "key": "no-app-match:Ryze:Q:Overload 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "5/5/5/5/5"
+   }
+  },
+  {
+   "key": "no-app-match:Ryze:Q:Overload 4",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "5/5/5/5/5"
+   }
+  },
+  {
+   "key": "no-wiki-page:Samira:P:splash coin",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-app-match:Sett:Q:Looking for a Fight",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/8/7/6/5"
+   }
+  },
+  {
+   "key": "no-app-match:Shaco:R:Hallucinate 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "100/90/80"
+   }
+  },
+  {
+   "key": "no-app-match:Shen:Q:Twilight Assault 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "8/7.25/6.5/5.75/5"
+   }
+  },
+  {
+   "key": "no-app-match:Shen:Q:Twilight Assault 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "8/7.25/6.5/5.75/5"
+   }
+  },
+  {
+   "key": "no-app-match:Shen:R:Stand United 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "200/180/160"
+   }
+  },
+  {
+   "key": "no-wiki-page:Shyvana:Q:Emberstrike 2",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-wiki-page:Shyvana:Q:Emberstrike 3",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-wiki-page:Shyvana:W:Inferno Aegis 2",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "passive:Sion:P:Death Surge",
+   "reason": "Timer of a sub-ability, not the passive's cooldown.",
+   "seen": {
+    "wiki": "100/100/100/100/100",
+    "static": false
+   }
+  },
+  {
+   "key": "no-app-match:Sion:W:Soul Furnace 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "15/14/13/12/11"
+   }
+  },
+  {
+   "key": "no-app-match:Sion:R:Unstoppable Onslaught 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "140/100/60"
+   }
+  },
+  {
+   "key": "no-app-match:Swain:R:Demonflare",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "8/8/8"
+   }
+  },
+  {
+   "key": "charges:Syndra:Q:Dark Sphere",
+   "reason": "Charges only with her Transcendent bonus; normal cooldown plus a mechanics note.",
+   "seen": {
+    "wikiRecharge": "7/7/7/7/7",
+    "wikiMax": "2/2/2/2/2",
+    "between": "1.25/1.25/1.25/1.25/1.25",
+    "betweenStatic": true
+   }
+  },
+  {
+   "key": "no-app-match:Syndra:W:Force of Will 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12/11/10/9"
+   }
+  },
+  {
+   "key": "passive:Taliyah:P:Rock Surfing",
+   "reason": "Unclear what the 2s times; not a cooldown players track.",
+   "seen": {
+    "wiki": "2",
+    "static": true
+   }
+  },
+  {
+   "key": "no-app-match:Taliyah:Q:Threaded Volley 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "7/6/5/4/3"
+   }
+  },
+  {
+   "key": "no-app-match:Taliyah:R:Weaver's Wall 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "180/150/120"
+   }
+  },
+  {
+   "key": "no-app-match:Taric:W:Bastion 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "15/15/15/15/15"
+   }
+  },
+  {
+   "key": "no-app-match:Thresh:Q:Deathly Leap",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "19/16.5/14/11.5/9"
+   }
+  },
+  {
+   "key": "no-app-match:Thresh:E:Flay 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12.25/11.5/10.75/10"
+   }
+  },
+  {
+   "key": "no-app-match:Thresh:E:Flay 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12.25/11.5/10.75/10"
+   }
+  },
+  {
+   "key": "no-app-match:Thresh:E:Flay 4",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12.25/11.5/10.75/10"
+   }
+  },
+  {
+   "key": "no-app-match:Thresh:E:Flay 5",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "13/12.25/11.5/10.75/10"
+   }
+  },
+  {
+   "key": "no-app-match:TwistedFate:W:Blue Card",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "6/6/6/6/6"
+   }
+  },
+  {
+   "key": "no-app-match:TwistedFate:W:Red Card",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "6/6/6/6/6"
+   }
+  },
+  {
+   "key": "no-app-match:TwistedFate:W:Gold Card",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "6/6/6/6/6"
+   }
+  },
+  {
+   "key": "no-app-match:TwistedFate:R:Gate",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "170/140/110"
+   }
+  },
+  {
+   "key": "no-app-match:Twitch:Q:Ambush 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "16/16/16/16/16"
+   }
+  },
+  {
+   "key": "no-app-match:Twitch:Q:Ambush 3",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "16/16/16/16/16"
+   }
+  },
+  {
+   "key": "unparsed:Urgot:W:Purge",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{dv|{{tt|{{fd|0.5}}|Rank 5 toggle on}}|{{tt|{{fd|0.25}}|Rank 5 toggle off}}}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Veigar:W:Dark Matter",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "cooldown={{pp|type=[[File:Phenomenal_Evil_Power.png|20px|link=Veigar#Phenomenal_Evil_Power]] [[Veigar#Phenomenal_Evil_Power|Phenomenal Evil]] stacks|8*0.9^(x-1);...;0|0 to 900 for 19;...;∞|formula=8 * 0.9^N. ''N{{equals}}Number of times that 50 Phenomenal Evil stacks are earned.''}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Velkoz:Q:Plasma Fission 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "7/7/7/7/7"
+   }
+  },
+  {
+   "key": "no-app-match:Velkoz:R:Researched",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "100/90/80"
+   }
+  },
+  {
+   "key": "unparsed:Vi:P:Blast Shield",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{pp|16 to 12 for 9|formula=16.5 - 0.5 * level, capped at level 9}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Vi:E:Relentless Force 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "12/11/10/9/8"
+   }
+  },
+  {
+   "key": "no-wiki-page:Viktor:P:Glorious Evolution 2",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-wiki-page:Viktor:P:Glorious Evolution 3",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-wiki-page:Viktor:P:Glorious Evolution 4",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-wiki-page:Viktor:P:Glorious Evolution 5",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-app-match:Viktor:Q:Discharge",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/8/7/6/5"
+   }
+  },
+  {
+   "key": "no-wiki-page:Viktor:R:Arcane Storm 3",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-app-match:Vladimir:Q:Crimson Rush",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/7.9/6.8/5.7/4.6"
+   }
+  },
+  {
+   "key": "unparsed:Yasuo:Q:Steel Tempest",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{as|{{pp|type='''bonus''' attack speed|4 to 1.48 for 8;4/3|key1=%|0 to 105;1000/9|formula=4*(1-(0.01 per 1.67% '''bonus''' attack speed)). ''This is capped at 67% reduction at 111.1% '''bonus''' attack speed.''}}|attack speed}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Yone:Q:Mortal Steel",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{as|{{pp|type='''bonus''' attack speed|4 to 1.48 for 8;4/3|key1=%|0 to 105;1000/9|formula=4*(1-(0.01 per 1.67% '''bonus''' attack speed)). ''This is capped at 67% reduction at 111.1% '''bonus''' attack speed.''}}|attack speed}}"
+    ]
+   }
+  },
+  {
+   "key": "unparsed:Yone:W:Spirit Cleave",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{as|{{pp|type='''bonus''' attack speed|14 to 6 for 11|key1=%|0 to 94.553|formula=14*(1-(0.01 per 1.51% '''bonus''' attack speed)). ''This is capped at 62.5% reduction at 94.6% '''bonus''' attack speed.''}}|attack speed}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Yorick:E:Mourning Mist 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "12/11/10/9/8"
+   }
+  },
+  {
+   "key": "no-app-match:Yunara:W:Arc of Judgment",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "10/10/10/10/10"
+   }
+  },
+  {
+   "key": "no-app-match:Yunara:W:Arc of Ruin",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "10/10/10/10/10"
+   }
+  },
+  {
+   "key": "no-app-match:Yunara:E:Kanmei's Steps",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/9/9/9/9"
+   }
+  },
+  {
+   "key": "no-app-match:Yunara:E:Untouchable Shadow",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "9/9/9/9/9"
+   }
+  },
+  {
+   "key": "passive:Yuumi:P:Feline Friendship",
+   "reason": "Wiki gives \"20 to 8 for 13\" without levels; spreading it would be a guess.",
+   "seen": {
+    "wiki": "20/19/18/17/16/15/14/13/12/11/10/9/8 @L1/2/4/5/7/8/10/11/12/14/15/17/18",
+    "static": true
+   }
+  },
+  {
+   "key": "no-wiki-page:Yuumi:Q:Prowling Projectile 2",
+   "reason": "Listed in the wiki champion module but has no data page.",
+   "seen": {}
+  },
+  {
+   "key": "no-app-match:Zaahen:Q:The Darkin Glaive 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "10/9/8/7/6"
+   }
+  },
+  {
+   "key": "no-app-match:Zed:W:Living Shadow 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "20/19/18/17/16"
+   }
+  },
+  {
+   "key": "no-app-match:Zed:R:Death Mark 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "120/110/100"
+   }
+  },
+  {
+   "key": "unparsed:Zeri:Q:Burst Fire",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static=1{{Divided by}}'''Zeri's''' {{as|attack speed}}"
+    ]
+   }
+  },
+  {
+   "key": "no-app-match:Zoe:Q:Paddle Star! 2",
+   "reason": "Recast / variant / sub-ability page with no separate entry in the app.",
+   "seen": {
+    "wiki": "8.5/8/7.5/7/6.5"
+   }
+  },
+  {
+   "key": "unparsed:Zyra:P:Garden of Thorns",
+   "reason": "Formula-based (stacks, attack speed, resistances) or a template reference; covered by a mechanics note where it matters.",
+   "seen": {
+    "raw": [
+     "static={{pp|13.6 - (13.6-9.05)/17*(x-1) for 20}}"
+    ]
+   }
+  }
+ ]
+}
